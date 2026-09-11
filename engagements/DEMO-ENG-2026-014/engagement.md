@@ -1,0 +1,917 @@
+# Engagement DEMO-ENG-2026-014
+
+> Demo artifact on the `red-team-engagement/v3` schema, showing the full pipeline over one thread: rt-govern -> rt-intel -> rt-verify -> rt-emulate -> rt-verify -> rt-adapt -> rt-report -> rt-verify -> rt-handoff. Scenario: a malicious insider reaching and exfiltrating customer PII from the CRM datastore, SOC blind, achieved over about eleven days. One control fired at the escalation step and was dismissed in triage; everything after was silent. Illustrative only; do not treat as a real engagement. Sources are in `sources/`; rendered deliverables are under `deliverables/`.
+
+## 1. Scoping Document (rt-govern)
+
+```json
+{
+  "schema": "red-team-engagement/v3#scoping",
+  "engagement_ref": "DEMO-ENG-2026-014",
+  "engagement_type": "red-team-operation",
+  "engagement_type_rationale": "The open question is whether an end-to-end insider path from standing access to CRM PII exfiltration would be detected unaided, which is a red team operation rather than a collaborative purple team exercise.",
+  "stakeholder": "M. Alvarez (Head of Customer Data Platform)",
+  "red_team_lead": "J. Rivera",
+  "peer_reviewed_by": "K. Sato",
+  "data_class": "public-reference",
+  "egress_permitted": { "source_content": true, "public_catalog_fetch": true },
+  "scoping_summary": {
+    "business_impact": "A reportable breach of the retail customer PII set held in the CRM, with regulator notification and board attention.",
+    "business_impact_validated": true,
+    "crown_jewels": ["CRM customer datastore"],
+    "in_scope": [
+      "CRM customer datastore",
+      "CRM application tier and its hosts",
+      "standing engineering access paths to the CRM"
+    ],
+    "out_of_scope": [
+      "any change to customer records (read and a minimal proof sample only)",
+      "availability impact to the production CRM",
+      "customer-facing web front end beyond the CRM application tier"
+    ],
+    "third_party_systems_in_path": [],
+    "physical_operations": false,
+    "constraints": [
+      "retrieve only a minimal PII proof sample and hold it in the engagement evidence store",
+      "no modification of customer data"
+    ]
+  },
+  "backlog": {
+    "source": "intelligence-surfaced",
+    "prioritization_rationale": "Sector reporting this quarter on rising financially motivated insider data theft and two disclosed peer breaches raised the insider-to-CRM path above other candidates; the path has never been exercised and the crown-jewel impact is a reportable PII breach."
+  },
+  "objectives": [
+    {
+      "id": "OBJ-1",
+      "outcome": "A malicious insider reaches and exfiltrates customer PII from the CRM datastore without being detected.",
+      "success_criterion": "A minimal customer PII proof sample is retrieved from the CRM datastore and moved outside the approved data boundary, confirmed by record count and content, with no access or egress alert acted on after the initial access step.",
+      "target_crown_jewel": "CRM customer datastore",
+      "business_impact": "A reportable breach of the retail customer PII set, regulator notification, and board attention.",
+      "systemic_relevance": "none",
+      "detection_question": "Would the SOC detect an end-to-end insider path from standing access to CRM PII exfiltration, unaided?",
+      "constraints": "Minimal proof sample only; no modification of customer data."
+    }
+  ],
+  "gate1_sign_off": {
+    "stakeholder": "M. Alvarez",
+    "operations_lead": "D. Chen",
+    "assessment_lead": "P. Nwosu",
+    "ciso": "L. Grant"
+  }
+}
+```
+
+Gate 1 signed by all four approvers (Stakeholder, Operations Lead, Assessment Lead, and the CISO). Cleared for rt-intel.
+
+## 2. Threat Profile (rt-intel)
+
+```json
+{
+  "schema": "red-team-engagement/v3#threat-profile",
+  "sources": ["MOCK-CTI-INSIDER-2026 (sources/insider-threat-brief.md)"],
+  "catalog_provenance": {
+    "attack": "live",
+    "atlas": "live",
+    "aadapt": "4.4.0"
+  },
+  "engagement_type_confirmed": "red-team-operation",
+  "actors": [
+    {
+      "objective_id": "OBJ-1",
+      "name": "Malicious insider (engineering)",
+      "intelligence_basis": {
+        "quote": "Financially motivated malicious insiders in financial services increasingly monetize customer data by reselling it to third parties.",
+        "locator": "Actor and motivation",
+        "recency": "Q3 2026 (mock)"
+      },
+      "motivation": "Financial gain from reselling retail customer PII to third parties.",
+      "capability": "Competent engineer with standing access to internal systems; uses legitimate tools rather than custom malware.",
+      "sophistication": "Moderate; relies on existing access and sanctioned pathways rather than novel exploitation.",
+      "opsec_posture": "persistent-covert"
+    }
+  ],
+  "techniques": [
+    {
+      "id": "T1078",
+      "framework": "attack",
+      "name": "Valid Accounts",
+      "objective_id": "OBJ-1",
+      "sourced": "intelligence",
+      "citations": [
+        {
+          "quote": "They begin from valid accounts they already hold rather than phishing for new credentials.",
+          "locator": "Observed tradecraft"
+        }
+      ],
+      "script_verdict": "confirmed",
+      "script_reason": "id-and-name-match"
+    },
+    {
+      "id": "T1068",
+      "framework": "attack",
+      "name": "Exploitation for Privilege Escalation",
+      "objective_id": "OBJ-1",
+      "sourced": "intelligence",
+      "citations": [
+        {
+          "quote": "Where their standing role is insufficient, they exploit an unpatched internal service to escalate privileges.",
+          "locator": "Observed tradecraft"
+        }
+      ],
+      "script_verdict": "confirmed",
+      "script_reason": "id-and-name-match"
+    },
+    {
+      "id": "T1021",
+      "framework": "attack",
+      "name": "Remote Services",
+      "objective_id": "OBJ-1",
+      "sourced": "intelligence",
+      "citations": [
+        {
+          "quote": "They move to target systems over sanctioned remote services rather than deploying new tooling.",
+          "locator": "Observed tradecraft"
+        }
+      ],
+      "script_verdict": "confirmed",
+      "script_reason": "id-and-name-match"
+    },
+    {
+      "id": "T1213",
+      "framework": "attack",
+      "name": "Data from Information Repositories",
+      "objective_id": "OBJ-1",
+      "sourced": "intelligence",
+      "citations": [
+        {
+          "quote": "Once positioned, they collect bulk records directly from information repositories such as CRM datastores.",
+          "locator": "Observed tradecraft"
+        }
+      ],
+      "script_verdict": "confirmed",
+      "script_reason": "id-and-name-match"
+    },
+    {
+      "id": "T1041",
+      "framework": "attack",
+      "name": "Exfiltration Over C2 Channel",
+      "objective_id": "OBJ-1",
+      "sourced": "intelligence",
+      "citations": [
+        {
+          "quote": "They exfiltrate the data over an allowed outbound channel that blends with normal traffic.",
+          "locator": "Observed tradecraft"
+        }
+      ],
+      "script_verdict": "confirmed",
+      "script_reason": "id-and-name-match"
+    }
+  ],
+  "excluded_techniques": [
+    {
+      "id": "T1190",
+      "framework": "attack",
+      "reason": "Zero-day exploitation of a public-facing service. This insider does not develop or acquire zero-day exploits; the brief records that they avoid it."
+    },
+    {
+      "id": "T1110",
+      "framework": "attack",
+      "reason": "Noisy domain-wide credential brute forcing. Inconsistent with a low-profile insider who works within existing access; the brief records that they avoid it."
+    }
+  ],
+  "intelligence_gaps": [
+    "The mock brief is sector-level, not attributed to a named group; the actor is a class, not a specific individual or crew.",
+    "The exact internal service an insider would exploit for escalation is assumed from tradecraft, not named in the source."
+  ],
+  "implications_for_planning": {
+    "initial_access_approach": "No external initial access; the insider starts from a standing valid account.",
+    "infrastructure_implied": "Minimal attacker infrastructure: an operator remote-access session, no external domains or delivery infrastructure.",
+    "specialist_capability_implied": "General engineering and internal-service exploitation; no smart-contract or specialist offensive capability required.",
+    "opsec_constraints": "Emulation stays within normal insider behavior patterns, across days rather than a single burst, using sanctioned pathways."
+  }
+}
+```
+
+## 3. Planning Pack (rt-emulate)
+
+```json
+{
+  "schema": "red-team-engagement/v3#planning",
+  "attack_paths": [
+    {
+      "objective_id": "OBJ-1",
+      "steps": [
+        {
+          "step": 1,
+          "technique_id": "T1078",
+          "framework": "attack",
+          "actor_consistent": true,
+          "action": "Authenticate to the internal remote-access path using the operator's standing engineering account, staying within its normal access pattern.",
+          "detection_risk": "low",
+          "detects_what": "Access analytics on the standing account; unlikely to fire because the account and pattern are expected.",
+          "branch_if_blocked": "If the standing account is constrained, request a second in-scope engineering account from the control group and repeat.",
+          "assumption": "The standing engineering account retains its normal access at the start of the window."
+        },
+        {
+          "step": 2,
+          "technique_id": "T1068",
+          "framework": "attack",
+          "actor_consistent": true,
+          "action": "Exploit an unpatched internal service to escalate from the standing role to the privileges needed to reach the CRM application tier.",
+          "detection_risk": "high",
+          "detects_what": "EDR behavioral monitoring on the internal service should fire at the exploitation step; this step is expected to be the most detectable and testing whether the response holds is part of the point.",
+          "branch_if_blocked": "If the service is patched, fall back to workstation credential harvesting from a peer engineering host.",
+          "assumption": "An unpatched internal service is reachable from the standing account's position."
+        },
+        {
+          "step": 3,
+          "technique_id": "T1021",
+          "framework": "attack",
+          "actor_consistent": true,
+          "action": "Move to the CRM application host over a sanctioned remote service using the escalated access, without deploying new tooling.",
+          "detection_risk": "low",
+          "detects_what": "Lateral-movement analytics on the remote service; low because the channel is sanctioned and in normal use.",
+          "branch_if_blocked": "If the primary remote service is restricted, use an alternative sanctioned administrative service to the same host.",
+          "assumption": "The CRM application host is reachable over a sanctioned remote service from the escalated position."
+        },
+        {
+          "step": 4,
+          "technique_id": "T1213",
+          "framework": "attack",
+          "actor_consistent": true,
+          "action": "Query the CRM datastore for a bulk set of customer records directly from the repository, then reduce it to a minimal proof sample.",
+          "detection_risk": "medium",
+          "detects_what": "Database-tier monitoring on bulk repository reads; would catch an unusual bulk query if any monitoring is present at that tier.",
+          "branch_if_blocked": "If direct datastore query is blocked, read the same records through the CRM application export function.",
+          "assumption": "The escalated access can read customer records from the CRM datastore."
+        },
+        {
+          "step": 5,
+          "technique_id": "T1041",
+          "framework": "attack",
+          "actor_consistent": true,
+          "action": "Move the minimal PII proof sample outside the approved data boundary over an allowed outbound channel that blends with normal traffic.",
+          "detection_risk": "low",
+          "detects_what": "Egress monitoring or DLP on the outbound channel; low because the channel is allowed and the volume is small.",
+          "branch_if_blocked": "If the primary allowed channel is inspected, use a second allowed outbound channel of equivalent trust.",
+          "assumption": "At least one allowed outbound channel reaches outside the approved data boundary."
+        }
+      ],
+      "terminal_action": "A minimal customer PII proof sample is confirmed outside the approved data boundary by record count and content, satisfying the OBJ-1 success criterion.",
+      "live_execution_safeguard": null,
+      "safeguard_verified": null
+    }
+  ],
+  "gate2_sign_off": {
+    "stakeholder": "M. Alvarez",
+    "operations_lead": "D. Chen",
+    "assessment_lead": "P. Nwosu",
+    "ciso": "L. Grant",
+    "legal": null
+  },
+  "authorizations": {
+    "legal": null,
+    "third_party": null
+  },
+  "human_owned": {
+    "infrastructure_plan_ref": "Planning Pack Part B / DEMO-ENG-2026-014",
+    "procurement_plan_ref": "Planning Pack Part C / DEMO-ENG-2026-014",
+    "rules_of_engagement_ref": "Rules of Engagement / DEMO-ENG-2026-014 (SOC blind; control group named)"
+  }
+}
+```
+
+Gate 2 (the Rules of Engagement) signed by all four approvers; no physical operations and no third-party systems in path, so no legal or third-party authorization is required. The objective is a PII read, not transaction-adjacent, so no live-execution safeguard is required. Cleared for execution.
+
+## 4. Execution Record (rt-adapt)
+
+```json
+{
+  "schema": "red-team-engagement/v3#execution",
+  "entry_criteria_confirmed": {
+    "timestamp": "2026-08-12T09:00:00Z",
+    "roe_signed": true,
+    "safeguards_active": true,
+    "soc_blind": true,
+    "c2_separated": true
+  },
+  "log": [
+    {
+      "timestamp": "2026-08-12T09:30:00Z",
+      "operator": "J. Rivera",
+      "objective_id": "OBJ-1",
+      "step": "1",
+      "action": "Authenticated to the internal remote-access path using the standing engineering account.",
+      "target": "internal remote-access path",
+      "technique_id": "T1078",
+      "framework": "attack",
+      "tooling": "standard remote-access client",
+      "outcome": "success",
+      "state_change": "authenticated session established under the standing account",
+      "artifact_introduced": null,
+      "safeguard_state": null,
+      "adaptation": null
+    },
+    {
+      "timestamp": "2026-08-14T11:10:00Z",
+      "operator": "J. Rivera",
+      "objective_id": "OBJ-1",
+      "step": "2",
+      "action": "Exploited an unpatched internal service to escalate privileges toward the CRM application tier.",
+      "target": "unpatched internal service",
+      "technique_id": "T1068",
+      "framework": "attack",
+      "tooling": "public proof-of-concept for the service flaw",
+      "outcome": "detected",
+      "state_change": "escalated privileges obtained",
+      "artifact_introduced": "temporary local account used for the escalation",
+      "safeguard_state": null,
+      "adaptation": null
+    },
+    {
+      "timestamp": "2026-08-16T14:05:00Z",
+      "operator": "J. Rivera",
+      "objective_id": "OBJ-1",
+      "step": "3",
+      "action": "Moved to the CRM application host over a sanctioned remote service using the escalated access.",
+      "target": "CRM application host",
+      "technique_id": "T1021",
+      "framework": "attack",
+      "tooling": "sanctioned administrative remote service",
+      "outcome": "success",
+      "state_change": "interactive access to the CRM application host",
+      "artifact_introduced": null,
+      "safeguard_state": null,
+      "adaptation": null
+    },
+    {
+      "timestamp": "2026-08-19T10:40:00Z",
+      "operator": "J. Rivera",
+      "objective_id": "OBJ-1",
+      "step": "4",
+      "action": "Queried the CRM datastore for a bulk set of customer records, then reduced the result to a minimal proof sample.",
+      "target": "CRM customer datastore",
+      "technique_id": "T1213",
+      "framework": "attack",
+      "tooling": "standard database client",
+      "outcome": "success",
+      "state_change": "minimal PII proof sample staged on the CRM application host",
+      "artifact_introduced": "staged proof-sample file on the CRM application host",
+      "safeguard_state": null,
+      "adaptation": null
+    },
+    {
+      "timestamp": "2026-08-22T15:20:00Z",
+      "operator": "J. Rivera",
+      "objective_id": "OBJ-1",
+      "step": "5",
+      "action": "Moved the minimal PII proof sample outside the approved data boundary over an allowed outbound channel.",
+      "target": "allowed outbound channel",
+      "technique_id": "T1041",
+      "framework": "attack",
+      "tooling": "allowed outbound channel in normal use",
+      "outcome": "success",
+      "state_change": "minimal PII proof sample confirmed outside the approved data boundary; OBJ-1 success criterion met",
+      "artifact_introduced": null,
+      "safeguard_state": null,
+      "adaptation": null
+    }
+  ],
+  "detection_observations": [
+    {
+      "timestamp": "2026-08-14T11:15:00Z",
+      "observation": "An EDR behavioral alert fired on the internal service at the escalation step and was closed in triage as a false positive.",
+      "timing": "day 3 of the window; closed within about 40 minutes"
+    }
+  ],
+  "deconfliction_events": [],
+  "deviations": [],
+  "kill_switch": [],
+  "disclosure_events": [],
+  "target_cleanup": [
+    {
+      "artifact": "temporary local account used for the escalation",
+      "removed": true,
+      "handed_to_owner": null
+    },
+    {
+      "artifact": "staged proof-sample file on the CRM application host",
+      "removed": true,
+      "handed_to_owner": null
+    }
+  ],
+  "attacker_infrastructure": [
+    {
+      "asset": "operator remote-access session (no external domains)",
+      "decommissioned": true,
+      "retained_for_retest": false,
+      "reason": null,
+      "owner": null,
+      "decommission_trigger": null
+    }
+  ],
+  "recovered_secrets": [
+    {
+      "type": "credential (standing engineering account; value not recorded)",
+      "system": "internal remote-access path and CRM application tier",
+      "rotation_owner_notified": true,
+      "rotation_confirmed": false
+    }
+  ]
+}
+```
+
+rt-adapt note: at the escalation step (T1068) the EDR alert fired and was dismissed in triage; the log records the `detected` outcome and the SOC's dismissal is captured independently in the Blue Team Account. No technique was blocked, so no variant was proposed. rt-adapt structured and appended the log; it did not act.
+
+## 5. Report (rt-report)
+
+```json
+{
+  "schema": "red-team-engagement/v3#report",
+  "control_provenance": {
+    "nist-csf": "2.0",
+    "nist-800-53": "5.1.1"
+  },
+  "blue_team_account": {
+    "captured_before_disclosure": true,
+    "exception": "none",
+    "account": "Given only the time window and the broad engineering-to-datastore scope, the SOC's account was: one EDR behavioral alert on an internal service on day 3 drew attention and was investigated, then closed as a false positive within about 40 minutes. Nothing else over the period was escalated. Lateral movement over the sanctioned remote service, the bulk read from the CRM datastore, and the outbound transfer were not seen.",
+    "ref": "Blue Team Account / DEMO-ENG-2026-014"
+  },
+  "detection_analysis": [
+    {
+      "objective_id": "OBJ-1",
+      "unaided_detected": true,
+      "stage": "privilege escalation (T1068)",
+      "gap_type": "process",
+      "reconciliation": "The Execution Record shows the escalation at 2026-08-14; the Blue Team Account, attributed to the SOC, records the matching EDR alert fired and was dismissed in triage within about 40 minutes. The one control that fired was dismissed, and every later stage (remote services, bulk repository read, exfiltration) went unseen. This is a process gap at triage, not a coverage gap at the escalation step."
+    }
+  ],
+  "objective_outcomes": [
+    {
+      "objective_id": "OBJ-1",
+      "outcome": "achieved",
+      "evidence": "A minimal customer PII proof sample was confirmed outside the approved data boundary by record count and content (Execution Record 2026-08-22, evidence index)."
+    }
+  ],
+  "findings": [
+    {
+      "id": "FND-1",
+      "source": "detection-gap",
+      "objective_id": "OBJ-1",
+      "description": "The one control that fired during the engagement, an EDR behavioral alert on an internal service at the escalation step, was dismissed in triage as a false positive within about 40 minutes. Triage had no secondary-review gate for a behavioral alert on an internal service, so a true positive was closed and the rest of the path proceeded unseen.",
+      "recommended_remediation": "Add a secondary-review gate before a behavioral alert on an internal service can be closed as a false positive, and feed dismissed behavioral alerts into a periodic review.",
+      "control_domain": [
+        {
+          "framework": "nist-csf",
+          "id": "DE.AE",
+          "name": "Adverse Event Analysis"
+        },
+        { "framework": "nist-csf", "id": "RS.AN", "name": "Incident Analysis" }
+      ],
+      "severity": "high",
+      "material": true,
+      "materiality_basis": "Operations Lead: the dismissed alert was the single opportunity to stop an end-to-end path to a reportable PII breach.",
+      "suggested_owner": "SOC / detection engineering"
+    },
+    {
+      "id": "FND-2",
+      "source": "attack-path",
+      "objective_id": "OBJ-1",
+      "description": "The standing engineering account held access to the CRM datastore beyond what the role required, which let the insider path reach and read customer records once positioned. Access to the CRM datastore was not constrained to least privilege.",
+      "recommended_remediation": "Constrain standing engineering access to the CRM datastore to least privilege, and review and recertify entitlements to the CRM customer records.",
+      "control_domain": [
+        {
+          "framework": "nist-csf",
+          "id": "PR.AA",
+          "name": "Identity Management, Authentication, and Access Control"
+        },
+        { "framework": "nist-800-53", "id": "AC-6", "name": "Least Privilege" }
+      ],
+      "severity": "high",
+      "material": true,
+      "materiality_basis": "Operations Lead: over-broad standing access to the crown-jewel datastore is the precondition for the whole insider path.",
+      "suggested_owner": "IAM / access governance"
+    },
+    {
+      "id": "FND-3",
+      "source": "detection-gap",
+      "objective_id": "OBJ-1",
+      "description": "There was no database-tier monitoring of the CRM datastore, so the bulk read of customer records produced no alert. No continuous monitoring watched for an unusual bulk query against the crown-jewel datastore.",
+      "recommended_remediation": "Add database-tier monitoring and alerting on bulk or unusual reads of the CRM customer records, tuned to the normal query profile.",
+      "control_domain": [
+        {
+          "framework": "nist-csf",
+          "id": "DE.CM",
+          "name": "Continuous Monitoring"
+        },
+        {
+          "framework": "nist-800-53",
+          "id": "SI-4",
+          "name": "System Monitoring"
+        }
+      ],
+      "severity": "high",
+      "material": true,
+      "materiality_basis": "Operations Lead: the bulk read of crown-jewel data was invisible, which is the step that turns access into a breach.",
+      "suggested_owner": "detection engineering / data platform"
+    },
+    {
+      "id": "FND-4",
+      "source": "detection-gap",
+      "objective_id": "OBJ-1",
+      "description": "The minimal PII proof sample left over an allowed outbound channel with no boundary inspection and no review of the egress records, so the exfiltration was not detected. The allowed channel crossing the approved data boundary was neither inspected for customer data nor reviewed after the fact.",
+      "recommended_remediation": "Apply boundary inspection or data-loss detection to the allowed outbound channels that cross the approved data boundary, and add periodic review of egress records for customer data.",
+      "control_domain": [
+        {
+          "framework": "nist-800-53",
+          "id": "SC-7",
+          "name": "Boundary Protection"
+        },
+        {
+          "framework": "nist-800-53",
+          "id": "AU-6",
+          "name": "Audit Record Review, Analysis, and Reporting"
+        }
+      ],
+      "severity": "high",
+      "material": true,
+      "materiality_basis": "Operations Lead: exfiltration over an allowed channel is the point where the data left, and nothing watched the boundary.",
+      "suggested_owner": "network security / SOC"
+    },
+    {
+      "id": "FND-5",
+      "source": "attack-path",
+      "objective_id": "OBJ-1",
+      "description": "An unpatched internal service permitted the privilege escalation at the escalation step. This is a discrete technical vulnerability in one internal service, distinct from the detection and access-control gaps, and the escalation was a failure to enforce the account's approved access.",
+      "recommended_remediation": "Patch the internal service to remediate the escalation vulnerability, and confirm the fix through the service's normal patch pipeline.",
+      "control_domain": [
+        {
+          "framework": "nist-800-53",
+          "id": "AC-3",
+          "name": "Access Enforcement"
+        }
+      ],
+      "severity": "medium",
+      "material": false,
+      "materiality_basis": "Operations Lead: a discrete single-service vulnerability routed to vulnerability management; the material risk is carried by the detection and access-control findings.",
+      "suggested_owner": "platform engineering / vulnerability management"
+    }
+  ],
+  "escalation": [
+    {
+      "finding_id": "FND-1",
+      "escalated_to": "CISO (L. Grant)",
+      "date": "2026-08-26"
+    },
+    {
+      "finding_id": "FND-2",
+      "escalated_to": "CISO (L. Grant)",
+      "date": "2026-08-26"
+    },
+    {
+      "finding_id": "FND-3",
+      "escalated_to": "CISO (L. Grant)",
+      "date": "2026-08-26"
+    },
+    {
+      "finding_id": "FND-4",
+      "escalated_to": "CISO (L. Grant)",
+      "date": "2026-08-26"
+    }
+  ],
+  "limitations": [
+    "The threat intelligence is a mock sector-level brief, not attribution to a named group; the actor is an insider class.",
+    "The engagement retrieved a minimal PII proof sample only, by scope, so it demonstrates the path rather than the full data volume an insider could take.",
+    "No disclosure to stand down a response occurred, so the unaided-detection measure covers the full window."
+  ]
+}
+```
+
+## 6. Handoff and Closure (rt-handoff)
+
+```json
+{
+  "schema": "red-team-engagement/v3#handoff",
+  "findings": [
+    {
+      "finding_id": "FND-1",
+      "enterprise_system": "detection-engineering",
+      "entry_ref": "DET-2026-0412",
+      "recommended_remediation": "Add a secondary-review gate before a behavioral alert on an internal service can be closed as a false positive, and feed dismissed behavioral alerts into a periodic review.",
+      "retest_handed_off": true,
+      "test_case_ref": "RETEST-DEMO-014-FND1"
+    },
+    {
+      "finding_id": "FND-2",
+      "enterprise_system": "control-tracking",
+      "entry_ref": "CTRL-2026-0413",
+      "recommended_remediation": "Constrain standing engineering access to the CRM datastore to least privilege, and review and recertify entitlements to the CRM customer records.",
+      "retest_handed_off": true,
+      "test_case_ref": "RETEST-DEMO-014-FND2"
+    },
+    {
+      "finding_id": "FND-3",
+      "enterprise_system": "detection-engineering",
+      "entry_ref": "DET-2026-0414",
+      "recommended_remediation": "Add database-tier monitoring and alerting on bulk or unusual reads of the CRM customer records, tuned to the normal query profile.",
+      "retest_handed_off": true,
+      "test_case_ref": "RETEST-DEMO-014-FND3"
+    },
+    {
+      "finding_id": "FND-4",
+      "enterprise_system": "detection-engineering",
+      "entry_ref": "DET-2026-0415",
+      "recommended_remediation": "Apply boundary inspection or data-loss detection to the allowed outbound channels that cross the approved data boundary, and add periodic review of egress records for customer data.",
+      "retest_handed_off": true,
+      "test_case_ref": "RETEST-DEMO-014-FND4"
+    },
+    {
+      "finding_id": "FND-5",
+      "enterprise_system": "vulnerability-management",
+      "entry_ref": "VULN-2026-1187",
+      "recommended_remediation": "Patch the internal service to remediate the escalation vulnerability, and confirm the fix through the service's normal patch pipeline.",
+      "retest_handed_off": true,
+      "test_case_ref": "RETEST-DEMO-014-FND5"
+    }
+  ],
+  "closure": {
+    "target_cleanup_confirmed": true,
+    "attacker_infrastructure_decommissioned": true,
+    "evidence_disposition": "The minimal PII proof sample and the engagement evidence are retained in the engagement evidence store under the records-retention standard and dispositioned at the retention deadline.",
+    "engagement_tracker_closed": true
+  },
+  "coverage_note": "The detection gaps at the database tier and at the egress boundary, and the triage process gap, are recurring themes for the program review and the Phase-2 threat-informed backlog. Insider paths that stay within sanctioned pathways remain under-monitored."
+}
+```
+
+## 7. Verification (rt-verify, independent context)
+
+### 7a. Scoping verification (target: scoping)
+
+```json
+{
+  "schema": "red-team-engagement/v3#verification",
+  "target": "scoping",
+  "producer_model": "claude (session tier)",
+  "verifier_model": "claude (verifier tier)",
+  "boundary": "same-vendor-different-tier",
+  "catalog_provenance": {
+    "attack": "live",
+    "atlas": "live",
+    "aadapt": "4.4.0"
+  },
+  "ready": true,
+  "verdicts": [
+    {
+      "id": "OBJ-1",
+      "verdict": "confirmed",
+      "reason": "An outcome (insider reaches and exfiltrates CRM PII), with a measurable success criterion (a minimal proof sample outside the boundary, confirmed by count and content), tracing to the CRM customer datastore crown jewel and a validated business impact.",
+      "checks": {
+        "outcome_not_technique": "yes",
+        "success_criterion_measurable": "yes",
+        "traces_to_crown_jewel": "yes",
+        "business_impact_validated": "yes",
+        "systemic_relevance_recorded": "yes"
+      }
+    }
+  ]
+}
+```
+
+### 7b. Threat-profile verification (target: threat-profile)
+
+```json
+{
+  "schema": "red-team-engagement/v3#verification",
+  "target": "threat-profile",
+  "producer_model": "claude (session tier)",
+  "verifier_model": "claude (verifier tier)",
+  "boundary": "same-vendor-different-tier",
+  "catalog_provenance": {
+    "attack": "live",
+    "atlas": "live",
+    "aadapt": "4.4.0"
+  },
+  "ready": true,
+  "verdicts": [
+    {
+      "id": "actor:malicious-insider",
+      "verdict": "confirmed",
+      "reason": "The intelligence_basis quote resolves verbatim in the mock brief and is genuine sector intelligence for this insider class and objective.",
+      "checks": { "intelligence_basis_real": "yes" }
+    },
+    {
+      "id": "T1078",
+      "verdict": "confirmed",
+      "reason": "id and name match; the quote resolves verbatim and describes starting from valid accounts already held.",
+      "checks": {
+        "id_name": "confirmed",
+        "quote_resolves": "yes",
+        "quote_supports_mapping": "yes",
+        "inferred_marked": "n/a"
+      }
+    },
+    {
+      "id": "T1068",
+      "verdict": "confirmed",
+      "reason": "id and name match; the quote resolves verbatim and describes exploiting an unpatched internal service to escalate privileges.",
+      "checks": {
+        "id_name": "confirmed",
+        "quote_resolves": "yes",
+        "quote_supports_mapping": "yes",
+        "inferred_marked": "n/a"
+      }
+    },
+    {
+      "id": "T1021",
+      "verdict": "confirmed",
+      "reason": "id and name match; the quote resolves verbatim and describes moving over sanctioned remote services.",
+      "checks": {
+        "id_name": "confirmed",
+        "quote_resolves": "yes",
+        "quote_supports_mapping": "yes",
+        "inferred_marked": "n/a"
+      }
+    },
+    {
+      "id": "T1213",
+      "verdict": "confirmed",
+      "reason": "id and name match; the quote resolves verbatim and describes collecting bulk records from information repositories such as CRM datastores.",
+      "checks": {
+        "id_name": "confirmed",
+        "quote_resolves": "yes",
+        "quote_supports_mapping": "yes",
+        "inferred_marked": "n/a"
+      }
+    },
+    {
+      "id": "T1041",
+      "verdict": "confirmed",
+      "reason": "id and name match; the quote resolves verbatim and describes exfiltration over an allowed outbound channel.",
+      "checks": {
+        "id_name": "confirmed",
+        "quote_resolves": "yes",
+        "quote_supports_mapping": "yes",
+        "inferred_marked": "n/a"
+      }
+    }
+  ]
+}
+```
+
+### 7c. Planning verification (target: planning)
+
+```json
+{
+  "schema": "red-team-engagement/v3#verification",
+  "target": "planning",
+  "producer_model": "claude (session tier)",
+  "verifier_model": "claude (verifier tier)",
+  "boundary": "same-vendor-different-tier",
+  "catalog_provenance": {
+    "attack": "live",
+    "atlas": "live",
+    "aadapt": "4.4.0"
+  },
+  "ready": true,
+  "verdicts": [
+    {
+      "id": "OBJ-1:step-1:T1078",
+      "verdict": "confirmed",
+      "reason": "Technique validates; actor-consistent (insider starts from a standing account); the path carries a branch; no safeguard required (not transaction-adjacent).",
+      "checks": {
+        "id_name": "confirmed",
+        "actor_consistent": "yes",
+        "has_branch": "yes",
+        "safeguard_verified": "n/a"
+      }
+    },
+    {
+      "id": "OBJ-1:step-2:T1068",
+      "verdict": "confirmed",
+      "reason": "Technique validates; actor-consistent (insider exploits an internal weakness rather than custom malware); the path carries a branch; no safeguard required.",
+      "checks": {
+        "id_name": "confirmed",
+        "actor_consistent": "yes",
+        "has_branch": "yes",
+        "safeguard_verified": "n/a"
+      }
+    },
+    {
+      "id": "OBJ-1:step-3:T1021",
+      "verdict": "confirmed",
+      "reason": "Technique validates; actor-consistent (movement over sanctioned remote services); the path carries a branch; no safeguard required.",
+      "checks": {
+        "id_name": "confirmed",
+        "actor_consistent": "yes",
+        "has_branch": "yes",
+        "safeguard_verified": "n/a"
+      }
+    },
+    {
+      "id": "OBJ-1:step-4:T1213",
+      "verdict": "confirmed",
+      "reason": "Technique validates; actor-consistent (bulk read from the repository); the path carries a branch; no safeguard required.",
+      "checks": {
+        "id_name": "confirmed",
+        "actor_consistent": "yes",
+        "has_branch": "yes",
+        "safeguard_verified": "n/a"
+      }
+    },
+    {
+      "id": "OBJ-1:step-5:T1041",
+      "verdict": "confirmed",
+      "reason": "Technique validates; actor-consistent (exfiltration over an allowed channel); the path carries a branch; a PII read is not transaction-adjacent, so no safeguard is required.",
+      "checks": {
+        "id_name": "confirmed",
+        "actor_consistent": "yes",
+        "has_branch": "yes",
+        "safeguard_verified": "n/a"
+      }
+    }
+  ]
+}
+```
+
+### 7d. Report verification (target: report)
+
+```json
+{
+  "schema": "red-team-engagement/v3#verification",
+  "target": "report",
+  "producer_model": "claude (session tier)",
+  "verifier_model": "claude (verifier tier)",
+  "boundary": "same-vendor-different-tier",
+  "catalog_provenance": {
+    "attack": "live",
+    "atlas": "live",
+    "aadapt": "4.4.0"
+  },
+  "ready": true,
+  "verdicts": [
+    {
+      "id": "blue_team_account",
+      "verdict": "confirmed",
+      "reason": "captured_before_disclosure is true with exception none; the account reads as an unaided SOC record over the window.",
+      "checks": { "blue_team_account_before_disclosure": "yes" }
+    },
+    {
+      "id": "FND-1",
+      "verdict": "confirmed",
+      "reason": "Traces to the detected escalation entry and the dismissed EDR alert in the Blue Team Account; names systems and processes, no individual; control ids validate.",
+      "checks": {
+        "narrative_supported": "yes",
+        "traces_to_log": "yes",
+        "no_individual_named": "yes",
+        "id_name": "confirmed"
+      }
+    },
+    {
+      "id": "FND-2",
+      "verdict": "confirmed",
+      "reason": "Traces to the repository read enabled by over-broad standing access; names systems and controls, no individual; control ids validate.",
+      "checks": {
+        "narrative_supported": "yes",
+        "traces_to_log": "yes",
+        "no_individual_named": "yes",
+        "id_name": "confirmed"
+      }
+    },
+    {
+      "id": "FND-3",
+      "verdict": "confirmed",
+      "reason": "Traces to the unalerted bulk read at step 4; names systems and controls, no individual; control ids validate.",
+      "checks": {
+        "narrative_supported": "yes",
+        "traces_to_log": "yes",
+        "no_individual_named": "yes",
+        "id_name": "confirmed"
+      }
+    },
+    {
+      "id": "FND-4",
+      "verdict": "confirmed",
+      "reason": "Traces to the undetected exfiltration at step 5; names systems and controls, no individual; control ids validate.",
+      "checks": {
+        "narrative_supported": "yes",
+        "traces_to_log": "yes",
+        "no_individual_named": "yes",
+        "id_name": "confirmed"
+      }
+    },
+    {
+      "id": "FND-5",
+      "verdict": "confirmed",
+      "reason": "Traces to the detected escalation via the unpatched internal service; recorded as a discrete vulnerability, no individual named; control id validates.",
+      "checks": {
+        "narrative_supported": "yes",
+        "traces_to_log": "yes",
+        "no_individual_named": "yes",
+        "id_name": "confirmed"
+      }
+    }
+  ]
+}
+```

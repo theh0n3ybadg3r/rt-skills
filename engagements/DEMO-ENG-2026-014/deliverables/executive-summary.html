@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Executive Summary: DEMO-ENG-2026-014</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --line: #d9d9d9; --accent: #7a1f1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e; --fg: #e8e6e3; --muted: #a8a8a8; --line: #3a3a3c; --accent: #e08585;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; padding: 2.5rem 1.25rem;
+  }
+  main { max-width: 48rem; margin: 0 auto; }
+  h1 { font-size: 1.8rem; line-height: 1.2; margin: 0 0 1rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.4rem; }
+  p { margin: 0.8rem 0; }
+  .meta { list-style: none; padding: 0; margin: 0 0 1rem; color: var(--muted); font-size: 0.95rem; }
+  .meta li { margin: 0.15rem 0; }
+  blockquote { color: var(--muted); border-left: 3px solid var(--line); margin: 1rem 0; padding: 0.3rem 0 0.3rem 1rem; font-style: italic; }
+</style>
+</head>
+<body>
+<main>
+<h1>Executive Summary: DEMO-ENG-2026-014</h1>
+<ul class="meta">
+  <li><strong>Engagement:</strong> DEMO-ENG-2026-014, insider path to CRM customer PII</li>
+  <li><strong>Engagement type:</strong> Red team operation (SOC blind)</li>
+  <li><strong>Classification:</strong> Confidential</li>
+  <li><strong>Prepared for:</strong> Stakeholder (Head of Customer Data Platform)</li>
+  <li><strong>Date:</strong> 2026-08-28</li>
+</ul>
+<blockquote>Demo deliverable. Illustrative only; do not treat as a real engagement.</blockquote>
+<p>A malicious insider could take the customer list and we would not have noticed. Over about eleven days a red team operator, starting from a standing engineering account, escalated privileges through an unpatched internal service, moved to the CRM application host, read customer records in bulk from the CRM datastore, and moved a minimal proof sample outside the approved data boundary. The objective was achieved.</p>
+<p>One control fired. An EDR behavioral alert at the escalation step was investigated and dismissed in triage as a false positive within about 40 minutes. Everything after that was silent: the lateral movement, the bulk read, and the exfiltration produced nothing the SOC acted on.</p>
+<p>What this means for the business: the crown-jewel customer PII in the CRM is reachable by an insider with standing access, and the current controls would not catch the path once the first alert is dismissed. In the wild this is a reportable breach of the retail customer PII set, with regulator notification and board attention.</p>
+<p>The gaps are three: alert triage closed the one true positive without a second look; there is no monitoring of bulk reads at the CRM database tier; and the egress boundary neither inspected nor reviewed the outbound channel the data left over. Standing engineering access to the CRM also exceeded what the role needs, and one internal service was unpatched.</p>
+<p>Next steps: the findings are handed to control tracking and vulnerability management with recommended remediations, the material findings are escalated to the CISO, and the red team will retest to confirm the fixes hold.</p>
+</main>
+</body>
+</html>

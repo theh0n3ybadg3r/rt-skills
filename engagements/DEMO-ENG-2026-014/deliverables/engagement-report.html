@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engagement Report: DEMO-ENG-2026-014</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --line: #d9d9d9;
+    --accent: #7a1f1f; --thead: #f2efec; --code: #f4f4f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e; --fg: #e8e6e3; --muted: #a8a8a8; --line: #3a3a3c;
+      --accent: #e08585; --thead: #2a2a2c; --code: #2a2a2c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; padding: 2.5rem 1.25rem;
+  }
+  main { max-width: 60rem; margin: 0 auto; }
+  h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 1rem; }
+  h2 { font-size: 1.35rem; margin: 2.2rem 0 0.6rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.25rem; }
+  h3 { font-size: 1.1rem; margin: 1.4rem 0 0.4rem; color: var(--accent); }
+  p { margin: 0.6rem 0; }
+  ul { margin: 0.5rem 0; padding-left: 1.4rem; }
+  li { margin: 0.3rem 0; }
+  code { background: var(--code); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+  blockquote { color: var(--muted); border-left: 3px solid var(--line); margin: 1rem 0; padding: 0.3rem 0 0.3rem 1rem; font-style: italic; }
+  .meta { list-style: none; padding: 0; margin: 0 0 1rem; color: var(--muted); font-size: 0.95rem; }
+  .meta li { margin: 0.15rem 0; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--line); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+  th { background: var(--thead); }
+</style>
+</head>
+<body>
+<main>
+<h1>Engagement Report: DEMO-ENG-2026-014</h1>
+<ul class="meta">
+  <li><strong>Engagement:</strong> DEMO-ENG-2026-014, insider path to CRM customer PII</li>
+  <li><strong>Engagement type:</strong> Red team operation (SOC blind)</li>
+  <li><strong>Classification:</strong> Confidential</li>
+  <li><strong>Report version:</strong> 1.0</li>
+  <li><strong>Prepared by:</strong> J. Rivera (Red Team Lead)</li>
+  <li><strong>Peer-reviewed by:</strong> K. Sato</li>
+  <li><strong>Date:</strong> 2026-08-28</li>
+  <li><strong>Distribution:</strong> Stakeholder (Head of Customer Data Platform), Operations Lead, Assessment Lead, CISO</li>
+</ul>
+<blockquote>Demo deliverable. Illustrative only; do not treat as a real engagement.</blockquote>
+
+<h2>1. Executive summary</h2>
+<p>A malicious insider could take the customer list and we would not have noticed. Over about eleven days a red team operator, starting from a standing engineering account, escalated privileges through an unpatched internal service, moved to the CRM application host, read customer records in bulk from the CRM datastore, and moved a minimal proof sample outside the approved data boundary. The objective was achieved.</p>
+<p>One control fired. An EDR behavioral alert at the escalation step was investigated and dismissed in triage as a false positive within about 40 minutes. Everything after that was silent: the lateral movement, the bulk read, and the exfiltration produced nothing the SOC acted on. The gaps are alert triage, database-tier monitoring of the CRM, and egress inspection at the boundary. The findings are handed to control tracking and vulnerability management with recommended remediations, and we will retest to confirm the fixes.</p>
+
+<h2>2. Scope and objectives</h2>
+<p>The engagement was authorized under a signed Scoping Document (Gate 1) and a signed Rules of Engagement (Gate 2), each approved by the Stakeholder, the Operations Lead, the Assessment Lead, and the CISO.</p>
+<ul>
+  <li><strong>Objective (OBJ-1):</strong> a malicious insider reaches and exfiltrates customer PII from the CRM datastore without being detected.</li>
+  <li><strong>Success criterion:</strong> a minimal customer PII proof sample retrieved from the CRM datastore and moved outside the approved data boundary, confirmed by record count and content, with no access or egress alert acted on after the initial access step.</li>
+  <li><strong>Crown jewel:</strong> the CRM customer datastore.</li>
+  <li><strong>Engagement type:</strong> red team operation, because the open question was whether an end-to-end insider path would be detected unaided, not a collaborative walk-through.</li>
+  <li><strong>Assumed actor:</strong> a financially motivated malicious insider (engineering) with standing access, selected from sector intelligence on insider data theft. The actor uses legitimate tools and sanctioned pathways rather than custom malware, and works patiently across days.</li>
+  <li><strong>Out of scope (a reader might assume it was tested):</strong> any change to customer records, availability impact to the production CRM, and the customer-facing web front end beyond the CRM application tier. The engagement retrieved a minimal proof sample only.</li>
+</ul>
+
+<h2>3. Attack narrative</h2>
+<p>The path followed five steps, each a validated ATT&amp;CK technique consistent with the assumed insider.</p>
+<ol>
+  <li><strong>Valid accounts (T1078).</strong> The operator authenticated to the internal remote-access path using the standing engineering account, within its normal access pattern. Outcome: success.</li>
+  <li><strong>Exploitation for privilege escalation (T1068).</strong> The operator exploited an unpatched internal service to escalate toward the CRM application tier. Outcome: detected. An EDR behavioral alert fired here.</li>
+  <li><strong>Remote services (T1021).</strong> Using the escalated access, the operator moved to the CRM application host over a sanctioned remote service, without new tooling. Outcome: success.</li>
+  <li><strong>Data from information repositories (T1213).</strong> The operator queried the CRM datastore for a bulk set of customer records and reduced the result to a minimal proof sample. Outcome: success.</li>
+  <li><strong>Exfiltration over C2 channel (T1041).</strong> The operator moved the minimal proof sample outside the approved data boundary over an allowed outbound channel. Outcome: success, satisfying the OBJ-1 success criterion.</li>
+</ol>
+<p>The path ran from 2026-08-12 to 2026-08-22.</p>
+
+<h2>4. Objective outcomes</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Objective</th><th>Outcome</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>OBJ-1: insider reaches and exfiltrates CRM PII undetected</td>
+      <td>Achieved</td>
+      <td>A minimal customer PII proof sample was confirmed outside the approved data boundary by record count and content (Execution Record 2026-08-22, evidence index).</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2>5. Detection and response performance</h2>
+<p>The Blue Team Account is the SOC's own account, captured before any disclosure, with the SOC given only the time window and the broad engineering-to-datastore scope. It is attributed to the SOC and stated here separately from the red team's assessment.</p>
+<p><strong>Blue Team Account (SOC, attributed separately).</strong> One EDR behavioral alert on an internal service on day 3 drew attention and was investigated, then closed as a false positive within about 40 minutes. Nothing else over the period was escalated. The lateral movement over the sanctioned remote service, the bulk read from the CRM datastore, and the outbound transfer were not seen.</p>
+<p><strong>Red team assessment (reconciliation).</strong> The Execution Record places the escalation at 2026-08-14, matching the dismissed EDR alert in the SOC account. One control fired, at the escalation step, and was dismissed in triage. Every later stage was unseen. Detection at the escalation step was unaided but the response failed at triage, which is a process gap rather than a coverage gap. The absence of any signal at the database read and at the egress boundary are coverage gaps: nothing was watching those stages.</p>
+
+<h2>6. Findings</h2>
+<p>Each finding names systems, controls, and processes, never an individual. Materiality is a determination of the Operations Lead, recorded here. Material findings were escalated to the CISO on 2026-08-26.</p>
+
+<h3>FND-1: the one alert that fired was dismissed in triage (detection gap, process)</h3>
+<p>The EDR behavioral alert at the escalation step was closed as a false positive within about 40 minutes. Triage had no secondary-review gate for a behavioral alert on an internal service, so a true positive was closed and the rest of the path proceeded unseen. Role in the path: the single opportunity to stop the operation. Recommended remediation: add a secondary-review gate before a behavioral alert on an internal service can be closed as a false positive, and feed dismissed behavioral alerts into a periodic review. Control domain: NIST CSF DE.AE (Adverse Event Analysis), NIST CSF RS.AN (Incident Analysis). Severity: high. Material: yes. Suggested owner: SOC / detection engineering.</p>
+
+<h3>FND-2: standing engineering access to the CRM exceeded least privilege (attack path)</h3>
+<p>The standing engineering account held access to the CRM datastore beyond what the role required, which let the insider path reach and read customer records once positioned. Role in the path: the precondition for the read. Recommended remediation: constrain standing engineering access to the CRM datastore to least privilege, and review and recertify entitlements to the CRM customer records. Control domain: NIST CSF PR.AA (Identity Management, Authentication, and Access Control), NIST SP 800-53 AC-6 (Least Privilege). Severity: high. Material: yes. Suggested owner: IAM / access governance.</p>
+
+<h3>FND-3: no database-tier monitoring of the CRM datastore (detection gap, coverage)</h3>
+<p>There was no database-tier monitoring of the CRM datastore, so the bulk read of customer records produced no alert. Role in the path: the step that turned access into data. Recommended remediation: add database-tier monitoring and alerting on bulk or unusual reads of the CRM customer records, tuned to the normal query profile. Control domain: NIST CSF DE.CM (Continuous Monitoring), NIST SP 800-53 SI-4 (System Monitoring). Severity: high. Material: yes. Suggested owner: detection engineering / data platform.</p>
+
+<h3>FND-4: exfiltration over an allowed channel crossed the boundary undetected (detection gap, coverage)</h3>
+<p>The minimal PII proof sample left over an allowed outbound channel with no boundary inspection and no review of the egress records, so the exfiltration was not detected. Role in the path: the step where the data left. Recommended remediation: apply boundary inspection or data-loss detection to the allowed outbound channels that cross the approved data boundary, and add periodic review of egress records for customer data. Control domain: NIST SP 800-53 SC-7 (Boundary Protection), NIST SP 800-53 AU-6 (Audit Record Review, Analysis, and Reporting). Severity: high. Material: yes. Suggested owner: network security / SOC.</p>
+
+<h3>FND-5: an unpatched internal service permitted the escalation (attack path, discrete vulnerability)</h3>
+<p>An unpatched internal service permitted the privilege escalation at the escalation step. This is a discrete technical vulnerability in one internal service, distinct from the detection and access-control gaps, and the escalation was a failure to enforce the account's approved access. Role in the path: the escalation mechanism. Recommended remediation: patch the internal service to remediate the escalation vulnerability, and confirm the fix through the service's normal patch pipeline. Control domain: NIST SP 800-53 AC-3 (Access Enforcement). Severity: medium. Material: no. Suggested owner: platform engineering / vulnerability management. Routed to vulnerability management.</p>
+
+<h2>7. Vulnerabilities outside the attack path</h2>
+<p>None recorded. Every finding in this engagement lay on the attack path or was a detection gap on it; no discrete off-path vulnerability was found and set aside.</p>
+
+<h2>8. Cleanup status</h2>
+<p>The two engagement artifacts introduced on the target, the temporary local account used for the escalation and the staged proof-sample file on the CRM application host, were removed at conclusion. The only attacker infrastructure was the operator remote-access session, with no external domains; it was decommissioned at execution close. No open cleanup item remains.</p>
+
+<h2>9. Deviations</h2>
+<p>None. The engagement ran within the signed Rules of Engagement, with no departure requiring an approver's rationale.</p>
+
+<h2>10. Limitations</h2>
+<ul>
+  <li>The threat intelligence is a mock sector-level brief, not attribution to a named group; the assumed actor is an insider class.</li>
+  <li>By scope, the engagement retrieved a minimal PII proof sample only, so it demonstrates the path rather than the full data volume an insider could take.</li>
+  <li>No disclosure to stand down a response occurred, so the unaided-detection measure covers the full window.</li>
+</ul>
+
+<h2>Appendix A: Scoping Document</h2>
+<p>See section 1 (<code>#scoping</code>) of <code>engagement.md</code>. OBJ-1 as approved, with the success criterion, crown jewel, and Gate 1 sign-off.</p>
+
+<h2>Appendix B: Threat Profile Brief</h2>
+<p>See section 2 (<code>#threat-profile</code>) of <code>engagement.md</code>. The malicious insider actor and the five techniques, each with a verbatim citation to the source brief.</p>
+
+<h2>Appendix C: Evidence index</h2>
+<p>The engagement evidence store referenced by the Execution Record, including the confirmation of the minimal PII proof sample outside the boundary (2026-08-22).</p>
+
+<h2>Appendix D: Execution Record</h2>
+<p>See section 4 (<code>#execution</code>) of <code>engagement.md</code>. The contemporaneous log, detection observation, cleanup, attacker infrastructure, and recovered-secret record.</p>
+
+<h2>Appendix E: MITRE technique mapping</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Step</th><th>Technique</th><th>ID</th><th>Framework</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Valid Accounts</td><td>T1078</td><td>ATT&amp;CK</td></tr>
+    <tr><td>2</td><td>Exploitation for Privilege Escalation</td><td>T1068</td><td>ATT&amp;CK</td></tr>
+    <tr><td>3</td><td>Remote Services</td><td>T1021</td><td>ATT&amp;CK</td></tr>
+    <tr><td>4</td><td>Data from Information Repositories</td><td>T1213</td><td>ATT&amp;CK</td></tr>
+    <tr><td>5</td><td>Exfiltration Over C2 Channel</td><td>T1041</td><td>ATT&amp;CK</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Excluded from the profile: zero-day exploitation of a public-facing service (T1190) and noisy domain-wide credential attacks (T1110), both inconsistent with this insider.</p>
+
+<h2>Appendix F: Blue Team Account</h2>
+<p>The retained Blue Team Account deliverable, <code>Blue Team Account / DEMO-ENG-2026-014</code>, captured before disclosure. Summarized in section 5.</p>
+</main>
+</body>
+</html>

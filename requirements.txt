@@ -1,0 +1,4 @@
+# Optional dependency, needed only for PDF source ingestion
+# (skills/_shared/scripts/pdf_convert.py). Everything else runs on stdlib Python 3, plus pandoc
+# (a system binary) for docx conversion. Install with:  pip install -r requirements.txt
+pdfplumber

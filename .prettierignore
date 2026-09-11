@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# Sample-advisory fixtures are mock external CTI, not project prose. Leave them as-is.
+skills/_shared/fixtures/
+
+# The internal RT methodology corpus (charter, policy, SOPs, templates) is the user's source
+# input that the skills conform to, not project prose to reformat. Leave it byte-stable.
+red-team-docs/

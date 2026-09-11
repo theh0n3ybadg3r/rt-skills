@@ -1,0 +1,31 @@
+{
+  "version": "5.1.1",
+  "subset": true,
+  "source": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
+  "note": "NIST SP 800-53 Rev 5 (OSCAL). The source catalog is U.S. government work in the public domain. This checked-in file is a representative subset of Rev 5.1.1 (controls and enhancements the exposure skill commonly cites) so the skill and tests run offline; regenerate the authoritative full catalog with sync_nist80053.py, then commit. Enhancement ids are stored in display form (AC-2(1)), not OSCAL dotted form (ac-2.1).",
+  "catalog": {
+    "AC-2": "Account Management",
+    "AC-2(1)": "Automated System Account Management",
+    "AC-3": "Access Enforcement",
+    "AC-4": "Information Flow Enforcement",
+    "AC-6": "Least Privilege",
+    "AC-6(1)": "Authorize Access to Security Functions",
+    "AC-17": "Remote Access",
+    "AU-2": "Event Logging",
+    "AU-6": "Audit Record Review, Analysis, and Reporting",
+    "CA-7": "Continuous Monitoring",
+    "CM-6": "Configuration Settings",
+    "CM-7": "Least Functionality",
+    "CM-8": "System Component Inventory",
+    "IA-2": "Identification and Authentication (Organizational Users)",
+    "IA-2(1)": "Multi-factor Authentication to Privileged Accounts",
+    "IA-5": "Authenticator Management",
+    "RA-5": "Vulnerability Monitoring and Scanning",
+    "SC-7": "Boundary Protection",
+    "SC-8": "Transmission Confidentiality and Integrity",
+    "SI-2": "Flaw Remediation",
+    "SI-3": "Malicious Code Protection",
+    "SI-4": "System Monitoring",
+    "SI-7": "Software, Firmware, and Information Integrity"
+  }
+}

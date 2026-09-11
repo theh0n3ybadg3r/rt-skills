@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red Team Skills - Architecture</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5b6570; --line: #e2e6ea;
+    --card: #f7f9fb; --accent: #2b6cb0; --accent2: #2f855a; --warn: #b7791f;
+    --code-bg: #f2f4f7; --code-fg: #1a1d21;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --fg: #e6e9ec; --muted: #9aa4ad; --line: #2b3138;
+      --card: #1c2126; --accent: #63b3ed; --accent2: #68d391; --warn: #f6ad55;
+      --code-bg: #0f1215; --code-fg: #e6e9ec;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.9rem; margin: 0 0 .35rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin: 2.4rem 0 .75rem; padding-top: .5rem; }
+  h3 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; }
+  p, li { color: var(--fg); }
+  .lede { color: var(--muted); font-size: 1.05rem; }
+  code { background: var(--code-bg); color: var(--code-fg); padding: .12em .4em; border-radius: 4px;
+    font: .88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .tag { display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; padding: .15em .5em; border-radius: 4px; color: #fff; }
+  .t-det { background: var(--accent2); } .t-llm { background: var(--accent); } .t-warn { background: var(--warn); }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93rem; }
+  th, td { border: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
+  th { background: var(--card); }
+  .fig { overflow-x: auto; margin: 1.25rem 0; }
+  .muted { color: var(--muted); }
+  a { color: var(--accent); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Red Team Skills: Architecture</h1>
+  <p class="lede">An AI-assisted, human-led operating model that turns an intake request into verified,
+  objective-based red team deliverables, built as composable Skills for Claude Code and Codex. It follows
+  a threat-informed, intelligence-led red team methodology: a capability-building and control-validation
+  function, not an independent assurance function.</p>
+</header>
+
+<h2>1. What this is</h2>
+<p>Eight composable skills: a six-phase engagement lifecycle that begins at intake, a cross-cutting
+independent verifier, and one standalone vulnerability capability. The six phase skills carry an engagement
+from intake to closure, handing off over one shared artifact. Each skill is markdown instructions the
+coding agent follows; the bundled code is small stdlib Python helpers, including <code>validate.py</code>
+(technique- and control-ID validation and the release gate) and <code>export.py</code> (optional, additive
+machine formats). Document conversion uses two external prerequisites: pandoc (<code>.docx</code> sources
+in, <code>.docx</code> deliverables out) and pdfplumber (<code>.pdf</code> sources in), wrapped by
+<code>pandoc_convert.py</code> and <code>pdf_convert.py</code>. The design goal is trustworthy automation:
+the machine does the tedious work and the checkable validation, and a human stays in command of
+authorization, execution, and release.</p>
+<p>Engagements are <strong>objective-based</strong>: an objective is a business outcome with a measurable
+success criterion, not a flag, a technique, or a vulnerability class. Three principles shape everything
+below: many small composable skills rather than one monolith; verification runs in an independent context;
+and anything checkable is checked by deterministic code, not by the model that might have gotten it wrong.</p>
+
+<h2>2. The pipeline</h2>
+<p>Six phase skills hand off over one shared artifact. Two authorization gates govern the run, an
+independent reviewer gates each producing phase fail-closed, and a human authorizes execution and release.</p>
+<div class="fig">
+<svg viewBox="0 0 820 384" style="max-width:100%;height:auto" role="img" aria-label="six-phase red team pipeline with two authorization gates over a shared artifact, plus independent verify and a standalone exposure skill">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7.5" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8892a0"></path>
+    </marker>
+  </defs>
+
+  <!-- gate pills above the junctions they guard -->
+  <rect x="108" y="6" width="72" height="20" rx="10" fill="none" stroke="var(--warn)" stroke-width="1.6"></rect>
+  <text x="144" y="20" text-anchor="middle" fill="currentColor" font-size="10.5" font-weight="700">Gate 1: scope</text>
+  <line x1="144" y1="26" x2="144" y2="40" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="3 3"></line>
+
+  <rect x="378" y="6" width="72" height="20" rx="10" fill="none" stroke="var(--warn)" stroke-width="1.6"></rect>
+  <text x="414" y="20" text-anchor="middle" fill="currentColor" font-size="10.5" font-weight="700">Gate 2: RoE</text>
+  <line x1="414" y1="26" x2="414" y2="40" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="3 3"></line>
+
+  <!-- six phase skills -->
+  <rect x="15" y="40" width="120" height="74" rx="10" fill="#b7791f"></rect>
+  <text x="75" y="55" text-anchor="middle" fill="#fff" font-size="8.5" opacity="0.9">PHASE 1</text>
+  <text x="75" y="74" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">rt-govern</text>
+  <text x="75" y="91" text-anchor="middle" fill="#fff" font-size="8.5">Intake + Scoping</text>
+
+  <rect x="150" y="40" width="120" height="74" rx="10" fill="#2f855a"></rect>
+  <text x="210" y="55" text-anchor="middle" fill="#fff" font-size="8.5" opacity="0.9">PHASE 2</text>
+  <text x="210" y="74" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">rt-intel</text>
+  <text x="210" y="91" text-anchor="middle" fill="#fff" font-size="8.5">Threat Intel</text>
+
+  <rect x="285" y="40" width="120" height="74" rx="10" fill="#2b6cb0"></rect>
+  <text x="345" y="55" text-anchor="middle" fill="#fff" font-size="8.5" opacity="0.9">PHASE 3</text>
+  <text x="345" y="74" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">rt-emulate</text>
+  <text x="345" y="91" text-anchor="middle" fill="#fff" font-size="8.5">Attack Planning</text>
+
+  <rect x="420" y="40" width="120" height="74" rx="10" fill="#2c7a7b"></rect>
+  <text x="480" y="55" text-anchor="middle" fill="#fff" font-size="8.5" opacity="0.9">PHASE 4</text>
+  <text x="480" y="74" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">rt-adapt</text>
+  <text x="480" y="91" text-anchor="middle" fill="#fff" font-size="8.5">Execution</text>
+
+  <rect x="555" y="40" width="120" height="74" rx="10" fill="#4c51bf"></rect>
+  <text x="615" y="55" text-anchor="middle" fill="#fff" font-size="8.5" opacity="0.9">PHASE 5</text>
+  <text x="615" y="74" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">rt-report</text>
+  <text x="615" y="91" text-anchor="middle" fill="#fff" font-size="8.5">Reporting</text>
+
+  <rect x="690" y="40" width="120" height="74" rx="10" fill="#5b6570"></rect>
+  <text x="750" y="55" text-anchor="middle" fill="#fff" font-size="8.5" opacity="0.9">PHASE 6</text>
+  <text x="750" y="74" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">rt-handoff</text>
+  <text x="750" y="91" text-anchor="middle" fill="#fff" font-size="8.5">Handoff + Closure</text>
+
+  <!-- arrows between phases -->
+  <line x1="137" y1="77" x2="148" y2="77" stroke="#8892a0" stroke-width="2.2" marker-end="url(#arrow)"></line>
+  <line x1="272" y1="77" x2="283" y2="77" stroke="#8892a0" stroke-width="2.2" marker-end="url(#arrow)"></line>
+  <line x1="407" y1="77" x2="418" y2="77" stroke="#8892a0" stroke-width="2.2" marker-end="url(#arrow)"></line>
+  <line x1="542" y1="77" x2="553" y2="77" stroke="#8892a0" stroke-width="2.2" marker-end="url(#arrow)"></line>
+  <line x1="677" y1="77" x2="688" y2="77" stroke="#8892a0" stroke-width="2.2" marker-end="url(#arrow)"></line>
+
+  <!-- each writes its section -->
+  <line x1="75" y1="116" x2="75" y2="150" stroke="#8892a0" stroke-width="1.4" marker-end="url(#arrow)"></line>
+  <line x1="210" y1="116" x2="210" y2="150" stroke="#8892a0" stroke-width="1.4" marker-end="url(#arrow)"></line>
+  <line x1="345" y1="116" x2="345" y2="150" stroke="#8892a0" stroke-width="1.4" marker-end="url(#arrow)"></line>
+  <line x1="480" y1="116" x2="480" y2="150" stroke="#8892a0" stroke-width="1.4" marker-end="url(#arrow)"></line>
+  <line x1="615" y1="116" x2="615" y2="150" stroke="#8892a0" stroke-width="1.4" marker-end="url(#arrow)"></line>
+  <line x1="750" y1="116" x2="750" y2="150" stroke="#8892a0" stroke-width="1.4" marker-end="url(#arrow)"></line>
+
+  <!-- shared artifact -->
+  <rect x="15" y="152" width="795" height="58" rx="10" fill="none" stroke="#8892a0" stroke-width="1.6" stroke-dasharray="6 4"></rect>
+  <text x="412" y="177" text-anchor="middle" fill="currentColor" font-size="14" font-weight="700">shared artifact: red-team-engagement/v3</text>
+  <text x="412" y="198" text-anchor="middle" fill="currentColor" font-size="10.5">1 scoping . 2 threat-profile . 3 planning . 4 execution . 5 report . 6 handoff . 7 verification</text>
+
+  <!-- verify (independent) and standalone exposure -->
+  <line x1="230" y1="210" x2="230" y2="248" stroke="#8892a0" stroke-width="1.4" marker-end="url(#arrow)"></line>
+
+  <rect x="90" y="250" width="280" height="60" rx="10" fill="none" stroke="#2b6cb0" stroke-width="1.8" stroke-dasharray="6 4"></rect>
+  <text x="230" y="275" text-anchor="middle" fill="currentColor" font-size="15" font-weight="700">rt-verify</text>
+  <text x="230" y="295" text-anchor="middle" fill="currentColor" font-size="10.5">independent context, four targets, gates fail-closed</text>
+
+  <rect x="450" y="250" width="280" height="60" rx="10" fill="none" stroke="#5b6570" stroke-width="1.6"></rect>
+  <text x="590" y="275" text-anchor="middle" fill="currentColor" font-size="15" font-weight="700">rt-exposure (standalone)</text>
+  <text x="590" y="295" text-anchor="middle" fill="currentColor" font-size="10.5">own exposure-assessment/v1, no rt-govern gate</text>
+
+  <text x="412" y="342" text-anchor="middle" fill="currentColor" font-size="12" font-weight="600">two bundled helpers: validate.py (id validation + the fail-closed gate), export.py (optional machine formats)</text>
+  <text x="412" y="362" text-anchor="middle" fill="currentColor" font-size="11" opacity="0.75">Both gates signed by Stakeholder, Operations Lead, Assessment Lead, and the CISO. The agent runs the helpers; the user never does.</text>
+</svg>
+</div>
+<ol>
+  <li><strong>rt-govern (Phase 1, Intake and Scoping)</strong> turns an intake request into an
+  outcome-based Scoping Document: it elicits the business impact from the stakeholder and validates it
+  against the enterprise business-impact analysis, derives the crown-jewel targets, drafts measurable
+  objectives, sets the data class and egress policy, and captures the Gate 1 sign-off. Nothing downstream
+  runs without a signed Scoping Document.</li>
+  <li><strong>rt-intel (Phase 2, Threat Intelligence and Objective Design)</strong> selects an
+  intelligence-justified threat actor per objective and maps each actor's techniques to
+  ATT&amp;CK/ATLAS/AADAPT with verbatim citations, confirms the engagement type, and writes the Threat
+  Profile Brief. It enriches the approach without changing the signed intent.</li>
+  <li><strong>rt-emulate (Phase 3, Attack Planning)</strong> turns the Scoping Document and Threat Profile
+  into the Engagement Planning Pack Part A: a hypothesized attack path per objective, each step a validated
+  technique that is actor-consistent, with a detection risk and a branch if blocked. It records the Gate 2
+  (Rules of Engagement) sign-off, which authorizes execution.</li>
+  <li><strong>rt-adapt (Phase 4, Execution and Live Testing)</strong> supports execution under a signed
+  RoE: it structures and appends the contemporaneous engagement log and proposes validated variant options
+  when a technique is blocked or detected (decision support). The human operator decides and executes;
+  rt-adapt executes nothing and never fabricates the log.</li>
+  <li><strong>rt-report (Phase 5, Reporting)</strong> reconciles the Execution Record against the Blue Team
+  Account to measure unaided detection, establishes findings that name systems, controls, and processes but
+  never an individual, and renders the Engagement Report and the Executive Summary. Material
+  findings escalate to the CISO.</li>
+  <li><strong>rt-handoff (Phase 6, Handoff and Closure)</strong> routes each finding into the enterprise
+  system that will own it (vulnerability management or control tracking), equips the retest function,
+  confirms cleanup and infrastructure decommission, and closes the engagement tracker.</li>
+  <li><strong>rt-verify (cross-cutting)</strong> runs in an independent context and gates each producing
+  section fail-closed across four targets (scoping, threat-profile, planning, report). Under Claude Code
+  that context is the <code>rt-engagement-verifier</code> sub-agent it dispatches; on Codex it is a fresh
+  session.</li>
+</ol>
+
+<h2>3. The shared artifact</h2>
+<p>One markdown file, <code>engagements/&lt;id&gt;/engagement.md</code>, carries the whole run. Each skill
+writes only its own section, in numbered order, and never modifies another skill's block. Every section
+carries a machine-readable JSON block the <code>validate</code> helper can parse.</p>
+<div class="grid">
+  <div class="card"><strong>1. Scoping Document</strong> (rt-govern)<br><span class="muted">objectives as outcomes, crown jewels, data class, egress, Gate 1 sign-off.</span></div>
+  <div class="card"><strong>2. Threat Profile</strong> (rt-intel)<br><span class="muted">intelligence-justified actor per objective, techniques with verbatim citations.</span></div>
+  <div class="card"><strong>3. Planning Pack</strong> (rt-emulate)<br><span class="muted">attack path per objective, detection risk, branches, Gate 2 (RoE) sign-off.</span></div>
+  <div class="card"><strong>4. Execution Record</strong> (rt-adapt)<br><span class="muted">contemporaneous log, detection observations, cleanup, recovered-secret types.</span></div>
+  <div class="card"><strong>5. Report</strong> (rt-report)<br><span class="muted">Blue Team Account, Detection Analysis, findings with control-domain mapping.</span></div>
+  <div class="card"><strong>6. Handoff and Closure</strong> (rt-handoff)<br><span class="muted">findings routed to enterprise systems, retest handoff, tracker closure.</span></div>
+  <div class="card"><strong>7. Verification</strong> (rt-verify)<br><span class="muted">per-item verdicts and the release <code>ready</code> flag, one block per target.</span></div>
+  <div class="card"><strong>Provenance</strong><br><span class="muted">each section records the catalog versions used, for the audit trail.</span></div>
+</div>
+
+<h2>4. Human-ready and machine formats</h2>
+<p>The Phase 5 deliverables are human documents: the Engagement Report and the Executive
+Summary, each in markdown, a self-contained HTML rendering, and an editable docx via pandoc. The
+methodology mandates no machine-format deliverable.</p>
+<div class="grid">
+  <div class="card"><strong>Human-ready</strong><br><span class="muted">markdown, a self-contained HTML
+  rendering (inline CSS, no external assets, ASCII-clean, light/dark aware; print it to PDF from any
+  browser), and an editable docx rendered with pandoc. The intake and engagement artifact render to docx
+  too.</span></div>
+  <div class="card"><strong>Machine formats</strong> (<code>export.py</code>, optional and
+  additive)<br><span class="muted">where a downstream SIEM, threat-intel platform, or ML pipeline asks for
+  one: structured JSON, a STIX 2.1 bundle, and ATT&amp;CK Navigator layers. Not required, and skipped
+  unless a consumer asks.</span></div>
+</div>
+<p><code>export.py</code> re-serializes content the phase skills already produced and <code>rt-verify</code>
+already validated; it re-serializes, it does not re-validate. STIX is framework-neutral and carries all
+three offensive frameworks; the Navigator layers are ATT&amp;CK-enterprise only, so ATLAS and AADAPT
+techniques ride in the STIX bundle rather than being forced into the layer. (<code>export.py</code> is
+being updated for the v3 schema and the real deliverable names in a later tooling pass; the Engagement
+Report and Executive Summary are the Phase 5 deliverables regardless.)</p>
+
+<h2>Standalone: vulnerability exposure (rt-exposure)</h2>
+<p>Not every request is a full engagement. <code>rt-exposure</code> (alias <code>rt-vuln</code>) is a
+standalone skill for on-demand subject-matter expertise on a newly disclosed vulnerability. It does not
+require an <code>rt-govern</code> authorization and does not write the engagement artifact; it reads the
+supplied advisory or CVE and writes its own <code>exposure-assessment/v1</code> artifact under
+<code>exposures/&lt;vuln-id&gt;/exposure.md</code>. It reuses the same machinery: the <code>validate</code>
+helper, the local document converters, and the independent-verifier pattern.</p>
+<p>It dissects the vulnerability (weakness / CWE, affected surface, exploitation path mapped to
+ATT&amp;CK/ATLAS/AADAPT, and severity signals, each grounded in a verbatim quote), judges whether the
+organization is exposed, and proposes compensating controls. Each control is mapped to a
+<strong>NIST CSF</strong> Category and/or a <strong>NIST SP 800-53</strong> control (verbatim citations),
+with an explicit limits-exposure claim and a stated residual risk. Two independent verifiers gate it
+fail-closed, one for the dissection and one for the controls, dispatched as the
+<code>rt-exposure-verifier</code> sub-agent (target <code>dissection</code>, then <code>controls</code>).
+Where the data class is <code>public-reference</code> (public CVEs), the verifiers can run on a different
+model than the producer for uncorrelated errors, within the data-class boundary.</p>
+
+<h2>5. Deterministic vs model-driven</h2>
+<p>This split is why verification can be trusted. Checkable facts are checked by code; only the genuinely
+semantic judgment is left to the model.</p>
+<table>
+  <tr><th>Step</th><th>Who does it</th><th>Why</th></tr>
+  <tr><td>Technique or control ID exists, ID type, official-name match, the release gate</td><td><span class="tag t-det">deterministic</span></td><td>Ground-truthable against the catalog. A model must not self-report these.</td></tr>
+  <tr><td>Which techniques the intelligence describes, and the quote for each</td><td><span class="tag t-llm">model</span></td><td>Reading comprehension over prose.</td></tr>
+  <tr><td>Whether an objective is an outcome, a quote supports a mapping, a step is actor-consistent, a finding traces to the record</td><td><span class="tag t-llm">model</span></td><td>The irreducibly semantic calls (the four rt-verify targets).</td></tr>
+</table>
+<p class="muted">The same split applies to <code>rt-exposure</code>: the <code>validate</code> helper checks
+NIST CSF and NIST SP 800-53 control IDs and names against their vendored catalogs, while the two verifiers
+judge whether the dissection is faithful and whether each control genuinely limits the exposure.</p>
+
+<h2>6. The fail-closed gate</h2>
+<p>Release is computed by <code>validate.py</code>'s gate mode, not typed by the model. An item is
+<code>confirmed</code> only when its ID (and name, if given) validate, a cited quote resolves, and the
+persona judgment for that target is yes. The artifact is <code>ready</code> only when there is at least one
+verdict and every verdict is <code>confirmed</code> (so a dropped failing item cannot pass).</p>
+<div class="card"><span class="tag t-warn">fail closed</span> An empty verdict set is never ready. If the
+catalog is unreachable, items become <code>unverifiable</code> and the artifact is gated. Nothing is ever
+silently passed.</div>
+
+<h2>7. Data-class model and its honest limit</h2>
+<p>Every run declares a data class. <code>public-reference</code> input may egress;
+<code>engagement-sensitive</code> input must not. The load-bearing idea: the public framework catalog is
+not source content, so fetching it to validate IDs is always allowed, even on a sensitive run. The helper
+honors this fully; it sends only catalog requests, never source text.</p>
+<div class="card"><span class="tag t-warn">limitation</span> The reasoning is done by the model. With a
+hosted model, that inference sends the source content to the model provider, which is itself egress. So
+<code>source_content: false</code> is a hard guarantee only with a local model or an enforced boundary.
+The design states this rather than overclaiming.</div>
+
+<h2>8. Catalog sourcing and maintenance</h2>
+<p>ATT&amp;CK and ATLAS self-update; the rest are vendored. This is the whole maintenance surface (see
+<code>MAINTENANCE.md</code>).</p>
+<ul>
+  <li><strong>ATT&amp;CK</strong> and <strong>ATLAS</strong>: fetched live from MITRE (always-latest STIX
+  / latest release), cached 24h. New techniques appear automatically.</li>
+  <li><strong>AADAPT</strong>: no live JSON endpoint, so a small version-pinned catalog is vendored and
+  re-synced with <code>sync_aadapt.py</code> (which prints a review diff). <code>validate.py
+  --catalog-info</code> reports versions and warns when it is stale.</li>
+  <li><strong>NIST 800-53</strong> and <strong>NIST CSF</strong> (the control frameworks used by
+  <code>rt-report</code> and <code>rt-exposure</code>): also vendored, re-synced with
+  <code>sync_nist80053.py</code> and <code>sync_csf.py</code>. Both NIST OSCAL and CSF sources are U.S.
+  government work in the public domain.</li>
+</ul>
+
+<h2>9. Cross-platform by construction</h2>
+<p>All domain knowledge lives in portable <code>references/*.md</code>. The <code>SKILL.md</code> (Claude
+Code) and <code>AGENTS.md</code> (Codex) files are thin adapters over the same references, so the two
+platforms share one core and Devin is a later port rather than a rewrite. Where a platform lacks per-agent
+model selection, everything runs on the inherited model.</p>
+
+<h2>10. Where this sits</h2>
+<p>Eight skills: a six-phase engagement pipeline (rt-govern, rt-intel, rt-emulate, rt-adapt, rt-report,
+rt-handoff), the cross-cutting independent verifier (rt-verify), and the standalone vulnerability-SME
+capability (rt-exposure) alongside them. Planned follow-ons include coverage and detection-gap skills for
+purple-team closure, seeding <code>rt-emulate</code> directly from the MITRE CTID library by adversary
+name, and packaging so the <code>/rt-*</code> commands install as slash commands.</p>
+
+<footer>
+Red Team Operating Model, architecture. Companion documents: product-overview.html (the why) and
+runbook.html (how to operate it). Source of record: the repository README and MAINTENANCE.md.
+</footer>
+</div>
+</body>
+</html>

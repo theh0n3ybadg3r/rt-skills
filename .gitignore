@@ -1,0 +1,90 @@
+# ---- Dependencies ----
+/node_modules/
+
+# ---- Local agent + dev environment (not shipped) ----
+# Skill install symlinks and any local Claude state (regenerate with `make install-skills`).
+/.claude/
+# Devcontainer belongs to the local environment, not the product.
+/.devcontainer/
+# Root CLAUDE.md is dev-only coding guidelines. The shipped operating context is templates/CLAUDE.md
+# (kept tracked). Anchored with a leading slash so this does NOT match templates/CLAUDE.md.
+/CLAUDE.md
+# Historical planning docs.
+/docs/plans/
+# Internal RT methodology corpus (charter, policy, SOPs, templates, decks) kept locally as the source
+# input the skills conform to. It is reference material, not shipped product; keep it out of git.
+/red-team-docs/
+
+# ---- Live engagement data (OPSEC: never commit real engagements) ----
+# Ignore everything under engagements/ except the one shipped worked example.
+/engagements/*
+!/engagements/DEMO-ENG-2026-014/
+
+# ---- Live exposure assessments (OPSEC: never commit real ones) ----
+# Ignore everything under exposures/ except the one shipped worked example.
+/exposures/*
+!/exposures/DEMO-CVE-2026-0001/
+
+# ---- Secrets and credentials (OPSEC) ----
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.ppk
+.netrc
+*.token
+*_token
+secrets.*
+.secrets/
+credentials
+credentials.*
+*.credentials
+.aws/
+.azure/
+gcloud/
+*kubeconfig*
+*.ovpn
+
+# ---- Red-team artifacts / loot (OPSEC) ----
+loot/
+evidence/
+*.loot
+*.pcap
+*.kirbi
+*.ccache
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# ---- Logs / scratch / backups ----
+*.log
+logs/
+*.tmp
+*.bak
+*.orig
+scratch/
+tmp/
+
+# ---- OS / editor cruft ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~

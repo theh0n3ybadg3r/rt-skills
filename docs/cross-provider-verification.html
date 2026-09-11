@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red Team Skills - Cross-Provider Verification</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5b6570; --line: #e2e6ea;
+    --card: #f7f9fb; --accent: #2b6cb0; --accent2: #2f855a; --warn: #b7791f;
+    --code-bg: #f2f4f7; --code-fg: #1a1d21;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --fg: #e6e9ec; --muted: #9aa4ad; --line: #2b3138;
+      --card: #1c2126; --accent: #63b3ed; --accent2: #68d391; --warn: #f6ad55;
+      --code-bg: #0f1215; --code-fg: #e6e9ec;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.9rem; margin: 0 0 .35rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin: 2.4rem 0 .75rem; padding-top: .5rem; }
+  h3 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; }
+  p, li { color: var(--fg); }
+  .lede { color: var(--muted); font-size: 1.05rem; }
+  code { background: var(--code-bg); color: var(--code-fg); padding: .12em .4em; border-radius: 4px;
+    font: .88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
+  .warncard { border-left: 4px solid var(--warn); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .tag { display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; padding: .15em .5em; border-radius: 4px; color: #fff; }
+  .t-det { background: var(--accent2); } .t-llm { background: var(--accent); } .t-warn { background: var(--warn); }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93rem; }
+  th, td { border: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
+  th { background: var(--card); }
+  ol.steps { padding-left: 1.2rem; }
+  ol.steps li { margin: .6rem 0; }
+  .muted { color: var(--muted); }
+  a { color: var(--accent); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Cross-Provider Verification</h1>
+  <p class="lede">How to run the independent verification pass on a different model provider from the one
+  that produced the engagement artifact, for example Codex on a GPT model verifying what Claude Code
+  produced, and the data-class rule that decides when you are allowed to.</p>
+</header>
+
+<h2>Why a different provider</h2>
+
+<p>Verification in this system has two halves, and only one of them gains from a second vendor.</p>
+
+<div class="grid">
+  <div class="card">
+    <span class="tag t-det">deterministic</span>
+    <h3>The machine check</h3>
+    <p><code>validate.py</code> checks every technique and control-domain ID by code: its shape, its
+    existence in the authoritative catalog, and its official name. This is stdlib Python that runs locally.
+    It is already independent of any model and does not change when you switch the verifier's provider.</p>
+  </div>
+  <div class="card">
+    <span class="tag t-llm">semantic</span>
+    <h3>The judgment</h3>
+    <p>Whether a quote actually supports a mapping, whether an objective is an outcome, whether a finding
+    traces to the log: these are judgments a model makes. Running them on a genuinely different vendor's
+    model produces uncorrelated errors. A Claude blind spot is not shared by GPT.</p>
+  </div>
+</div>
+
+<p>This is the strongest form of the independence the design already aspires to. The <code>#verification</code>
+block records it: every block carries <code>producer_model</code>, <code>verifier_model</code>, and
+<code>boundary</code>, so the audit trail shows which model produced the work and which model checked it.</p>
+
+<h2>The rule that governs it: the data class</h2>
+
+<div class="card warncard">
+  <span class="tag t-warn">read this first</span>
+  <p>The verifier <strong>receives the source content</strong>, it re-reads the cited sources to confirm each
+  quote is present verbatim. So the choice of verifier host is an egress decision, and the engagement's data
+  class governs it. Sending source content to a different vendor or host is egress across a boundary.</p>
+</div>
+
+<table>
+  <thead>
+    <tr><th>Data class</th><th>Cross-vendor verification</th><th>Why</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>public-reference</code></td>
+      <td><strong>Allowed, and preferred</strong> for independence.</td>
+      <td>The source is already public (published CVEs, advisories). Sending it to another vendor is not a
+      new disclosure. This is the common case for <code>rt-exposure</code>.</td>
+    </tr>
+    <tr>
+      <td><code>engagement-sensitive</code></td>
+      <td><strong>Only on an authorized host.</strong> Otherwise a blocker, not a fallback.</td>
+      <td>Target-derived intelligence must stay on the authorized boundary. A public consumer Codex or GPT
+      account is not that boundary and using it violates the data-class policy. Use an enterprise OpenAI or
+      Azure OpenAI deployment under the same no-train, no-retain terms the organization sanctioned, or keep
+      the verifier on the authorized boundary (a different Claude tier still gives a fresh context).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="muted">This matches the rule in <code>skills/_shared/references/degradation.md</code> (KTD4) and
+<code>rt-verify</code>. Cross-vendor verification does not relax it: independence never justifies egressing
+engagement-sensitive content across an unauthorized boundary.</p>
+
+<h2>The operational workflow (available today, no new code)</h2>
+
+<p>The skills ship a Codex adapter (<code>AGENTS.md</code>) for every skill, and Codex runs a GPT model. So
+you can produce the engagement in Claude Code and run the verify pass in Codex, using the two harnesses as
+two independent contexts on two vendors. Nothing new is required.</p>
+
+<ol class="steps">
+  <li><strong>Produce in Claude Code.</strong> Run phases 1 to 6 (<code>/rt-govern</code> through
+  <code>/rt-report</code> and <code>/rt-handoff</code>). The artifact is
+  <code>engagements/&lt;id&gt;/engagement.md</code>; the cited sources sit beside it.</li>
+  <li><strong>Open a fresh Codex session for the verify pass.</strong> Give it only the engagement artifact,
+  the cited sources, and <code>validate.py</code>. Do not hand it the Claude producer's reasoning: the point
+  of a fresh context is that it never saw how the work was produced.</li>
+  <li><strong>Run the reviewer per target.</strong> For the engagement artifact, verify each of
+  <code>scoping</code>, <code>threat-profile</code>, <code>planning</code>, and <code>report</code>; for a
+  standalone exposure assessment, run the two verifiers (dissection and controls). The reviewer re-derives
+  each verdict from the artifact, the sources, and live catalog data
+  (<code>validate.py --entries ... --refresh</code>), and returns the <code>#verification</code> block. It
+  does not reuse the producer's <code>script_verdict</code>.</li>
+  <li><strong>Write the block and compute the gate.</strong> Run
+  <code>validate.py --gate &lt;block&gt; --expect-ids &lt;ids&gt;</code>. It returns ready only when every
+  verdict is confirmed and every expected ID is covered. Record <code>producer_model</code> (the Claude
+  model), <code>verifier_model</code> (the GPT model), and <code>boundary</code>
+  (<code>cross-vendor-permitted-public-reference</code>, or the authorized-host value for a sanctioned
+  enterprise endpoint).</li>
+</ol>
+
+<p>In the existing design, running the verifier in Codex is listed as a fallback for when a named agent is
+unavailable. Used deliberately across vendors, it is a first-class independence choice, not a degradation.</p>
+
+<h2>What does not change</h2>
+
+<p>Whichever model renders the judgment, the trust floor is the same code. <code>validate.py</code> and the
+fail-closed gate run locally and are vendor-agnostic: a catalog it cannot reach is still
+<code>unverifiable</code>, an empty verdict set still never passes, and <code>--expect-ids</code> still
+prevents dropping a failing item to sneak past. Switching providers strengthens the semantic-independence
+claim; it does not touch the deterministic checks.</p>
+
+<h2>Future work: automated cross-provider dispatch</h2>
+
+<div class="card">
+  <span class="tag t-warn">not implemented</span>
+  <p>A future option is to make the cross-provider verify pass a single command rather than a manual harness
+  switch: a bundled helper that shells out to a provider CLI (<code>codex exec</code>) or an
+  OpenAI-compatible API for the semantic pass and returns the <code>#verification</code> block. It would
+  enforce the data-class gate in code, refusing to send engagement-sensitive source to an unauthorized
+  boundary.</p>
+  <p>The tradeoffs are why it is not built today: it adds a third-party dependency, credential handling, and
+  an egress surface, and it moves away from the current stdlib-only, one-bundled-validation-helper design. It
+  is recorded here as a roadmap option, not a shipped feature.</p>
+</div>
+
+<footer>
+  See <a href="runbook.html">the runbook</a> for the operator guide and
+  <a href="architecture.html">the architecture</a> for the design. The independence rules this page builds on
+  live in <code>skills/_shared/references/degradation.md</code>.
+</footer>
+</div>
+</body>
+</html>

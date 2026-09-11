@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red Team Operating Model - Product Overview</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5b6570; --line: #e2e6ea;
+    --card: #f7f9fb; --accent: #2b6cb0; --accent2: #2f855a; --warn: #b7791f;
+    --code-bg: #f2f4f7; --code-fg: #1a1d21;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --fg: #e6e9ec; --muted: #9aa4ad; --line: #2b3138;
+      --card: #1c2126; --accent: #63b3ed; --accent2: #68d391; --warn: #f6ad55;
+      --code-bg: #0f1215; --code-fg: #e6e9ec;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 2rem; margin: 0 0 .35rem; letter-spacing: -0.01em; }
+  h2 { font-size: 1.3rem; margin: 2.4rem 0 .75rem; }
+  h3 { font-size: 1.05rem; margin: 1.4rem 0 .4rem; }
+  .lede { color: var(--muted); font-size: 1.1rem; }
+  code { background: var(--code-bg); color: var(--code-fg); padding: .12em .4em; border-radius: 4px;
+    font: .88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .93rem; }
+  th, td { border: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
+  th { background: var(--card); }
+  .muted { color: var(--muted); }
+  .pill { display:inline-block; background: var(--card); border:1px solid var(--line); border-radius: 999px;
+    padding:.15em .7em; font-size:.82rem; margin:.15rem .2rem 0 0; }
+  .stage { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin:1rem 0; }
+  .stage span.box { background: var(--accent); color:#fff; border-radius:8px; padding:.4rem .7rem; font-weight:600; font-size:.9rem; }
+  .stage span.sep { color: var(--muted); }
+  a { color: var(--accent); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Red Team Operating Model</h1>
+  <p class="lede">Turning an intake request into objective-based, independently verified red team
+  deliverables, with AI doing the tedious work and humans keeping command. It follows a
+  threat-informed, intelligence-led red team methodology: a capability-building
+  and control-validation function, not an independent assurance function.</p>
+</header>
+
+<h2>The problem</h2>
+<p>Intelligence-led red teaming drowns in intelligence. Threat reports, advisories, and framework updates
+arrive faster than anyone can turn them into a scoped, defensible engagement. The manual path is slow and
+inconsistent, and a single wrong technique mapping can send an engagement down the wrong road or undermine
+a stakeholder-facing deliverable. Engagements are objective-based, so the harder discipline is keeping
+every step tied to a business outcome with a measurable success criterion, not chasing flags or
+techniques. The goal is to compress intake and intelligence into action without giving up human judgment or
+leaking sensitive engagement data.</p>
+
+<h2>The operating model in one line</h2>
+<div class="stage">
+  <span class="box">scope</span><span class="sep">-&gt;</span>
+  <span class="box">intel</span><span class="sep">-&gt;</span>
+  <span class="box">plan</span><span class="sep">-&gt;</span>
+  <span class="box">execute</span><span class="sep">-&gt;</span>
+  <span class="box">report</span><span class="sep">-&gt;</span>
+  <span class="box">handoff</span>
+</div>
+<p>Six phase skills each do one phase of the lifecycle and hand off over one shared engagement artifact,
+beginning at intake. You invoke them as slash commands (<code>/rt-govern</code>, <code>/rt-intel</code>,
+...). Two authorization gates govern the run: Gate 1 signs off the Scoping Document (what is tested) and
+Gate 2 signs off the Rules of Engagement (how it runs, and authorizes execution). Both are signed by the
+Stakeholder, the Operations Lead, the Assessment Lead, and the CISO. An independent
+reviewer gates each producing phase fail-closed, and humans authorize execution and release. The skills are
+markdown instructions; the bundled code is small stdlib helpers (technique- and control-ID validation,
+optional machine formats, document conversion), with pandoc (docx) and pdfplumber (pdf) as external
+prerequisites for document conversion.</p>
+
+<h2>The pipeline skills</h2>
+<p>Six phase skills plus a cross-cutting verifier carry the engagement; a standalone vulnerability skill
+(below) makes eight in all.</p>
+<table>
+  <tr><th>Skill</th><th>Phase</th><th>What it produces</th></tr>
+  <tr><td><code>/rt-govern</code></td><td>1. Intake and Scoping</td><td>Scoping Document: objectives as outcomes, crown jewels, data class, Gate 1 sign-off</td></tr>
+  <tr><td><code>/rt-intel</code></td><td>2. Threat Intelligence and Objective Design</td><td>Threat Profile Brief: intelligence-justified actor and validated ATT&amp;CK/ATLAS/AADAPT techniques per objective</td></tr>
+  <tr><td><code>/rt-emulate</code></td><td>3. Attack Planning</td><td>Engagement Planning Pack Part A: attack path per objective, Gate 2 (RoE) sign-off</td></tr>
+  <tr><td><code>/rt-adapt</code></td><td>4. Execution and Live Testing</td><td>Execution Record: contemporaneous log and variant decision support</td></tr>
+  <tr><td><code>/rt-report</code></td><td>5. Reporting</td><td>Engagement Report and Executive Summary; Blue Team Account and Detection Analysis</td></tr>
+  <tr><td><code>/rt-handoff</code></td><td>6. Handoff and Closure</td><td>Findings routed to enterprise vulnerability-management / control-tracking; retest handoff; tracker closed</td></tr>
+  <tr><td><code>/rt-verify</code></td><td>cross-cutting</td><td>Independent-context reviewer that gates each producing phase across four targets</td></tr>
+</table>
+
+<h2>A standalone capability: vulnerability exposure</h2>
+<p>Aside from a full engagement, the team is often asked to act as subject-matter expert on a newly
+disclosed vulnerability. <code>/rt-exposure</code> (alias <code>rt-vuln</code>) does this on its own,
+with no governance gate and no engagement artifact: it dissects the vulnerability from a supplied
+advisory or CVE (the weakness, the affected surface, the exploitation path mapped to
+ATT&amp;CK/ATLAS/AADAPT, and severity signals, each grounded in a verbatim quote), judges whether the
+organization is exposed, and proposes compensating controls. Each control is mapped to a
+<strong>NIST CSF</strong> Category and/or a <strong>NIST SP 800-53</strong> control, with an explicit
+statement of how it limits the exposure and what residual risk remains. Two independent verifiers, one for
+the dissection and one for the controls, gate the assessment fail-closed and can run on a different model
+than the producer for uncorrelated errors.</p>
+
+<h2>Why composable, not a monolith</h2>
+<p>One big skill cannot check its own work honestly, cannot apply the right scrutiny per phase, and cannot
+cleanly separate what may leave the machine from what may not. Splitting the work into small skills makes
+verification independent, keeps each piece auditable, and lets the same authorization gates sit in front of
+execution and release. This mirrors how mature engineering-assistant systems are built: many focused skills
+over one shared artifact, with review isolated from authoring.</p>
+
+<h2>Framework coverage and trust</h2>
+<p>Offensive technique mappings are validated against three MITRE frameworks, so nothing invented slips
+through: <strong>ATT&amp;CK Enterprise</strong> and <strong>ATLAS</strong> (AI/ML systems) fetched live,
+and <strong>AADAPT</strong> (digital-asset / payment tech) vendored. The reporting and compensating-control
+side (<code>rt-report</code> and <code>rt-exposure</code>) validates control IDs the same way against
+<strong>NIST CSF</strong> and <strong>NIST SP 800-53</strong> (both vendored, public domain). OWASP is a
+sanctioned vocabulary for naming a web vulnerability class, but an OWASP-driven scope is a penetration
+test, redirected to that function, not this program's work. The split that makes verification trustworthy:
+the agent reads and judges; deterministic code checks everything checkable. Wrong or invented IDs are
+caught by code, not trusted to the model.</p>
+<div class="grid">
+  <div class="card"><strong>Proven end to end</strong><br><span class="muted">A worked engagement runs
+  govern -> intel -> emulate -> adapt -> report -> handoff, past two authorization gates and independent
+  verification, on a crypto-custody scenario spanning ATT&amp;CK and AADAPT.</span></div>
+  <div class="card"><strong>Auditable by design</strong><br><span class="muted">Fail-closed gating, two
+  signed authorization gates, non-attribution in findings, and per-run catalog provenance (which data
+  versions were used).</span></div>
+</div>
+
+<h2>The validated outputs</h2>
+<p>Every engagement produces one auditable artifact whose sections are <code>scoping</code>,
+<code>threat-profile</code>, <code>planning</code>, <code>execution</code>, <code>report</code>,
+<code>handoff</code>, and <code>verification</code>, plus the human deliverables: the Engagement Report
+and the Executive Summary, with the Blue Team Account retained separately. Each deliverable
+carries only independently verified content; anything gated is flagged, not presented as final. Machine
+formats (JSON, STIX 2.1, ATT&amp;CK Navigator layers) are optional and additive, produced only when a
+downstream consumer asks.</p>
+
+<h2>Roadmap</h2>
+<p><span class="pill">packaging: /rt-* as slash commands</span>
+<span class="pill">coverage &amp; detection-gap skills (purple team)</span>
+<span class="pill">rt-emulate from the CTID library by name</span>
+<span class="pill">Devin port</span></p>
+
+<h2>Honest limitations</h2>
+<ul>
+  <li>With a hosted model, the reasoning steps send source content to the model provider. Full no-egress
+  requires a local model or an enforced boundary. The tooling states this rather than overclaiming.</li>
+  <li>Live validation depends on reaching MITRE; an outage or air-gap gates the run (fail-closed) rather
+  than passing unverified data. AADAPT and the NIST control catalogs are vendored and need periodic
+  re-sync.</li>
+  <li>Verification independence is procedural, not organizational: the guarantee is a separate drafter, a
+  fresh verifying context that never saw the producer's reasoning, and a report the tested function cannot
+  edit (its own account is captured separately as the Blue Team Account).</li>
+</ul>
+
+<footer>
+Red Team Operating Model, product overview. Companion documents: architecture.html (how it works) and
+runbook.html (how to operate it).
+</footer>
+</div>
+</body>
+</html>

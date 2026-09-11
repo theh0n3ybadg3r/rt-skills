@@ -1,0 +1,13 @@
+{
+  "name": "red-team-pilot-skills",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Markdown formatting config for the red team pilot skills repo.",
+  "scripts": {
+    "format": "prettier --write \"**/*.md\"",
+    "format:check": "prettier --check \"**/*.md\""
+  },
+  "devDependencies": {
+    "prettier": "3.9.6"
+  }
+}

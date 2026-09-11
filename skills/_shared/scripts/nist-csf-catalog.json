@@ -1,0 +1,30 @@
+{
+  "version": "2.0",
+  "subset": true,
+  "source": "https://csrc.nist.gov/projects/cybersecurity-framework (NIST CSF 2.0 Core; machine-readable via the NIST Cybersecurity and Privacy Reference Tool, CPRT)",
+  "note": "NIST Cybersecurity Framework 2.0 Core, U.S. government work in the public domain. This checked-in file is the complete set of the 22 CSF 2.0 Categories (the control-domain granularity the reporting phase maps findings to), so the skill and tests run offline. It does NOT include the finer Subcategories (e.g. PR.AA-01); regenerate the full Category + Subcategory catalog with sync_csf.py, then commit. Ids are the CSF element identifiers (Category XX.YY, Subcategory XX.YY-NN); names are the official Category titles.",
+  "catalog": {
+    "DE.AE": "Adverse Event Analysis",
+    "DE.CM": "Continuous Monitoring",
+    "GV.OC": "Organizational Context",
+    "GV.OV": "Oversight",
+    "GV.PO": "Policy",
+    "GV.RM": "Risk Management Strategy",
+    "GV.RR": "Roles, Responsibilities, and Authorities",
+    "GV.SC": "Cybersecurity Supply Chain Risk Management",
+    "ID.AM": "Asset Management",
+    "ID.IM": "Improvement",
+    "ID.RA": "Risk Assessment",
+    "PR.AA": "Identity Management, Authentication, and Access Control",
+    "PR.AT": "Awareness and Training",
+    "PR.DS": "Data Security",
+    "PR.IR": "Technology Infrastructure Resilience",
+    "PR.PS": "Platform Security",
+    "RC.CO": "Incident Recovery Communication",
+    "RC.RP": "Incident Recovery Plan Execution",
+    "RS.AN": "Incident Analysis",
+    "RS.CO": "Incident Response Reporting and Communication",
+    "RS.MA": "Incident Management",
+    "RS.MI": "Incident Mitigation"
+  }
+}

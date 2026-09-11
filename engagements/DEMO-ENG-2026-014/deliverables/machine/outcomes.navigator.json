@@ -1,0 +1,60 @@
+{
+  "name": "DEMO-ENG-2026-014 execution outcomes",
+  "versions": {
+    "navigator": "4.9.1",
+    "layer": "4.5"
+  },
+  "domain": "enterprise-attack",
+  "description": "Executed ATT&CK techniques colored by outcome from the defender's view: green blocked, orange detected, red undetected success. ATLAS/AADAPT outcomes are in the STIX bundle, not this ATT&CK-only layer.",
+  "techniques": [
+    {
+      "techniqueID": "T1021",
+      "score": 3,
+      "color": "#d62728",
+      "comment": "success: Moved to the CRM application host over a sanctioned remote service using the escalated access.",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1041",
+      "score": 3,
+      "color": "#d62728",
+      "comment": "success: Moved the minimal PII proof sample outside the approved data boundary over an allowed outbound channel.",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1068",
+      "score": 2,
+      "color": "#f4a742",
+      "comment": "detected: Exploited an unpatched internal service to escalate privileges toward the CRM application tier.",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1078",
+      "score": 3,
+      "color": "#d62728",
+      "comment": "success: Authenticated to the internal remote-access path using the standing engineering account.",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1213",
+      "score": 3,
+      "color": "#d62728",
+      "comment": "success: Queried the CRM datastore for a bulk set of customer records, then reduced the result to a minimal proof sample.",
+      "enabled": true
+    }
+  ],
+  "legendItems": [
+    {
+      "label": "blocked (defense worked)",
+      "color": "#2ca25f"
+    },
+    {
+      "label": "detected (caught, still succeeded)",
+      "color": "#f4a742"
+    },
+    {
+      "label": "success (undetected)",
+      "color": "#d62728"
+    }
+  ]
+}

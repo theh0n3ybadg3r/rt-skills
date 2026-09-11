@@ -1,0 +1,49 @@
+{
+  "name": "DEMO-ENG-2026-014 planned coverage",
+  "versions": {
+    "navigator": "4.9.1",
+    "layer": "4.5"
+  },
+  "domain": "enterprise-attack",
+  "description": "Planned ATT&CK coverage for this engagement (threat profile + attack paths). ATLAS and AADAPT techniques are in the STIX bundle, not this layer.",
+  "techniques": [
+    {
+      "techniqueID": "T1021",
+      "score": 1,
+      "comment": "Remote Services",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1041",
+      "score": 1,
+      "comment": "Exfiltration Over C2 Channel",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1068",
+      "score": 1,
+      "comment": "Exploitation for Privilege Escalation",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1078",
+      "score": 1,
+      "comment": "Valid Accounts",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1213",
+      "score": 1,
+      "comment": "Data from Information Repositories",
+      "enabled": true
+    }
+  ],
+  "gradient": {
+    "colors": [
+      "#ffffff",
+      "#66b1ff"
+    ],
+    "minValue": 0,
+    "maxValue": 1
+  }
+}

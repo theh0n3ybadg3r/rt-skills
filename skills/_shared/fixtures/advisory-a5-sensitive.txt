@@ -1,0 +1,10 @@
+ENGAGEMENT-SENSITIVE — ENG-2026-014 — handle locally, do not egress source content
+
+Target: ACME Corp internal payroll application (in-scope per ROE ENG-2026-014).
+
+Observed during the assessment: the tester delivered a spearphishing email with a malicious
+attachment to a payroll clerk to obtain initial access to the segment.
+
+This file is engagement-sensitive. When processing it, run rt-authorize with
+data_class = engagement-sensitive. The advisory text must not be sent to any external service; only
+the public ATT&CK/ATLAS catalog may be fetched to validate technique IDs.

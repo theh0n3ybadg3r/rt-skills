@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red Team Skills - Runbook</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1d21; --muted: #5b6570; --line: #e2e6ea;
+    --card: #f7f9fb; --accent: #2b6cb0; --warn: #b7791f;
+    --code-bg: #f2f4f7; --code-fg: #1a1d21;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --fg: #e6e9ec; --muted: #9aa4ad; --line: #2b3138;
+      --card: #1c2126; --accent: #63b3ed; --warn: #f6ad55;
+      --code-bg: #0f1215; --code-fg: #e6e9ec;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.62 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.9rem; margin: 0 0 .35rem; }
+  h2 { font-size: 1.3rem; margin: 2.2rem 0 .6rem; padding-top:.4rem; border-top:1px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 1.3rem 0 .35rem; }
+  .lede { color: var(--muted); }
+  code { background: var(--code-bg); color: var(--code-fg); padding: .12em .4em; border-radius: 4px;
+    font: .88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 8px; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92rem; }
+  th, td { border: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
+  th { background: var(--card); }
+  .note { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--warn);
+    border-radius: 6px; padding: .8rem 1rem; margin: 1rem 0; }
+  a { color: var(--accent); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Red Team Skills: User Guide and Runbook</h1>
+  <p class="lede">Operate the eight-skill red team operating model end to end: take an intake request
+  through six phases to a verified Engagement Report, then hand the findings to the enterprise systems
+  that own them.</p>
+</header>
+
+<p>The program implements a threat-informed, intelligence-led red team methodology: a
+<strong>capability-building and control-validation function, not an independent assurance function</strong>. Engagements
+are <strong>objective-based</strong>, not flag- or vulnerability-based. Technique mappings validate against
+ATT&amp;CK, ATLAS, and AADAPT; control-domain mappings against NIST CSF and NIST SP 800-53.</p>
+
+<p>For the design, see <a href="architecture.html">architecture.html</a>. For the why, see
+<a href="product-overview.html">product-overview.html</a>. To run the verify pass on a separate model
+provider (Codex on a GPT model) for cross-vendor independence, see
+<a href="cross-provider-verification.html">cross-provider-verification.html</a>. A plain-text copy of this
+guide lives at <code>docs/runbook.md</code>.</p>
+
+<h2>Prerequisites</h2>
+<ul>
+  <li>Python 3.9 or newer on PATH. The bundled Python helpers are stdlib only, so the core pipeline needs
+  no <code>pip install</code>.</li>
+  <li><code>pandoc</code> on PATH, for document conversion: reading <code>.docx</code> intel sources, and
+  rendering the human deliverables (plus the intake and engagement artifact) to <code>.docx</code>.
+  Install it from <code>https://pandoc.org/installing.html</code>.</li>
+  <li><code>pdfplumber</code> (a pip package) for reading <code>.pdf</code> intel sources:
+  <code>pip install -r requirements.txt</code>.</li>
+  <li>Both converters are optional. Without them the rest of the pipeline still runs: a missing pandoc
+  stops the docx steps with a clear message, and a missing pdfplumber makes <code>rt-intel</code> fall
+  back to reading PDFs natively (with less reliable quotes and locators).</li>
+  <li>Network access to <code>raw.githubusercontent.com</code> and <code>api.github.com</code> for live
+  ATT&amp;CK and ATLAS validation (cached under <code>~/.cache/red-team-skills/catalogs/</code>). AADAPT,
+  NIST CSF, and NIST SP 800-53 are vendored, so they need no network.</li>
+</ul>
+
+<h2>Install (no plugin)</h2>
+<p>The skills are plain files, not a plugin or marketplace, so there is nothing to publish or register.
+Claude Code auto-discovers skills from a skills directory; one <code>make</code> target symlinks them
+there so the <code>/rt-*</code> slash commands appear:</p>
+<pre><code>make install-skills                    # links skills/rt-* into ./.claude/skills (this repo)
+make install-skills SCOPE=personal     # links into ~/.claude/skills instead
+make uninstall-skills                  # remove the links
+make list-skills                       # show what is installed
+make install-agents                    # links agents/rt-* into ./.claude/agents (the verifiers)
+make list-agents                       # show installed agents
+make new-engagement NAME=ENG-2026-020  # scaffold an engagement intake from the template
+make render-docx ENG=&lt;id&gt;              # render an engagement's deliverables + intake + engagement to docx (needs pandoc)</code></pre>
+<p>Claude Code picks the skills up live (no restart); both explicit <code>/rt-govern</code> and automatic
+description-matched invocation then work. The links are gitignored, so <code>make install-skills</code> is
+a per-checkout step. Run the agent from the repo root so each skill's shared paths
+(<code>skills/_shared/...</code>) resolve.</p>
+<p><code>make install-agents</code> symlinks the verifier sub-agents (also under the gitignored
+<code>.claude/</code>, so per-checkout too): <code>rt-engagement-verifier</code> (dispatched by
+<code>rt-verify</code>) and <code>rt-exposure-verifier</code> (dispatched by <code>rt-exposure</code>).
+Each skill dispatches its verifier under Claude Code to get the independent context its trust gate
+requires; Codex has no equivalent named agent and uses a fresh <code>spawn_agent</code> or session
+instead, so it needs no agent install.</p>
+<p>Give the agent the always-on operating context (guardrails and pipeline, in force before any skill
+fires) by placing the operating-context files at the project root:</p>
+<pre><code>make install-agent-context DEST=.   # copies templates/CLAUDE.md + templates/AGENTS.md (refuses to clobber)</code></pre>
+<p><code>templates/CLAUDE.md</code> (Claude Code) and <code>templates/AGENTS.md</code> (Codex) carry the
+human-led guardrails (run <code>/rt-govern</code> first, no autonomous offensive execution, data-class
+egress limits, fail-closed independent verification, ingested CTI treated as untrusted data). They are
+operating context for an engagement project, separate from any coding-style <code>CLAUDE.md</code> you
+keep for development.</p>
+<p>If you cannot or do not want to install even that: ask the agent to "read and follow
+<code>skills/rt-intel/SKILL.md</code>" (works anywhere in the repo), or on Codex rely on the shipped
+<code>AGENTS.md</code> adapter in each skill. Either way the bundled Python helpers run under plain
+<code>python3</code> regardless of how a skill is invoked; only document conversion additionally needs
+pandoc (docx) or pdfplumber (pdf).</p>
+
+<h2>The six phases and two gates</h2>
+<p>The engagement lifecycle begins at intake and runs six phases, each phase to one skill:</p>
+<table>
+  <tr><th>Phase</th><th>Skill</th><th>Produces</th></tr>
+  <tr><td>1. Intake and Scoping</td><td><code>rt-govern</code></td><td>The Scoping Document and the Gate 1 sign-off</td></tr>
+  <tr><td>2. Threat Intelligence and Objective Design</td><td><code>rt-intel</code></td><td>The Threat Profile Brief</td></tr>
+  <tr><td>3. Attack Planning</td><td><code>rt-emulate</code></td><td>The Engagement Planning Pack Part A and the Gate 2 sign-off</td></tr>
+  <tr><td>4. Execution and Live Testing</td><td><code>rt-adapt</code></td><td>The Execution Record</td></tr>
+  <tr><td>5. Reporting</td><td><code>rt-report</code></td><td>The Engagement Report, Executive Summary, and Blue Team Account</td></tr>
+  <tr><td>6. Handoff and Closure</td><td><code>rt-handoff</code></td><td>Findings routed to the enterprise systems; the tracker closed</td></tr>
+</table>
+<p><code>rt-verify</code> is cross-cutting (it gates a phase output fail-closed) and <code>rt-exposure</code>
+is standalone (vulnerability SME, outside the lifecycle).</p>
+<p><strong>Two authorization gates</strong> govern the run, each signed by the same four approvers: the
+Stakeholder, the Operations Lead, the Assessment Lead, and the CISO. The CISO is a
+required approver and may approve asynchronously, but no gate clears without it.</p>
+<ul>
+  <li><strong>Gate 1</strong> is the Scoping Document sign-off (Phase 1). It approves <em>what</em> is tested.</li>
+  <li><strong>Gate 2</strong> is the Rules of Engagement sign-off (Phase 3). It approves <em>how</em> the
+  engagement runs and authorizes execution.</li>
+</ul>
+
+<h2>Typical engagement (end to end)</h2>
+<p>The arc of one engagement. The verify gates are the point: no generated artifact is trusted until an
+independent context confirms it, and the gate is fail-closed, so an unreachable catalog or an unresolved
+item halts rather than passes.</p>
+<ol>
+  <li><strong>Intake and Scoping.</strong> <code>make new-engagement NAME=&lt;id&gt;</code>, edit
+  <code>engagements/&lt;id&gt;/intake.md</code>, then <code>/rt-govern engagements/&lt;id&gt;/intake.md</code>
+  -&gt; the Scoping Document with the <strong>Gate 1</strong> sign-off. Nothing downstream runs without it.</li>
+  <li><code>/rt-verify</code> target scoping, in a fresh session -&gt; gate. Resolve any refuted item,
+  re-run until <code>ready: true</code>.</li>
+  <li><strong>Threat Intelligence and Objective Design.</strong> <code>/rt-intel</code> -&gt; the Threat
+  Profile Brief (an intelligence-justified actor and cited techniques per objective).</li>
+  <li><code>/rt-verify</code> target threat-profile -&gt; gate.</li>
+  <li><strong>Attack Planning.</strong> <code>/rt-emulate</code> -&gt; the Engagement Planning Pack Part A
+  (an attack path per objective) and the <strong>Gate 2</strong> Rules of Engagement sign-off that
+  authorizes execution.</li>
+  <li><code>/rt-verify</code> target planning -&gt; gate the plan.</li>
+  <li><strong>Execution and Live Testing (human-led).</strong> <code>/rt-adapt</code> proposes validated
+  variants and appends the contemporaneous log as techniques are blocked or detected. The operator acts;
+  the tool proposes and records, and never fabricates the log.</li>
+  <li><strong>Reporting.</strong> <code>/rt-report</code> reconciles the Execution Record against the Blue
+  Team Account (captured before disclosure), records findings with NIST CSF / NIST SP 800-53 control-domain
+  mappings, and renders the Engagement Report and Executive Summary. Material findings escalate to the CISO.</li>
+  <li><code>/rt-verify</code> target report -&gt; gate the findings and the detection account.</li>
+  <li><strong>Handoff and Closure.</strong> <code>/rt-handoff</code> routes each finding to vulnerability
+  management or control tracking, hands the retest team its test cases, confirms cleanup and decommission,
+  and closes the engagement tracker.</li>
+</ol>
+<p>Worked examples ship under <code>engagements/DEMO-ENG-2026-014/</code> (a full engagement on the
+<code>red-team-engagement/v3</code> schema) and <code>exposures/DEMO-CVE-2026-0001/</code> (a standalone
+exposure assessment). The per-skill detail follows.</p>
+
+<h2>The workflow</h2>
+<p>The six phase skills hand off over one engagement artifact,
+<code>engagements/&lt;engagement-id&gt;/engagement.md</code> (schema <code>red-team-engagement/v3</code>),
+each writing only its own section: <code>#scoping</code>, <code>#threat-profile</code>,
+<code>#planning</code>, <code>#execution</code>, <code>#report</code>, <code>#handoff</code>, and the
+cross-cutting <code>#verification</code>. The <code>&lt;engagement-id&gt;</code> is a deterministic slug of
+your scope reference; <code>/rt-govern</code> reports the exact path.</p>
+
+<h3>1. Govern (/rt-govern, Phase 1: Intake and Scoping)</h3>
+<p>Start from the intake template (<code>templates/INTAKE.md</code>): run
+<code>make new-engagement NAME=&lt;id&gt;</code> to scaffold <code>engagements/&lt;id&gt;/intake.md</code>,
+fill in the scope, the crown-jewel targets, a data class, a deconfliction contact/window, and the intel
+sources, then run <code>/rt-govern engagements/&lt;id&gt;/intake.md</code>. The skill reads the intake,
+elicits and validates the business impact, and writes the Scoping Document.</p>
+<ul>
+  <li>It elicits the business impact from the stakeholder and validates it against the enterprise
+  business-impact analysis. Business impact is not a red-team product; where the analysis is missing, that
+  is a gap raised to enterprise risk.</li>
+  <li>It drafts measurable objectives. Each is an outcome (a business outcome with a measurable success
+  criterion), never a technique, system, or vulnerability class. If every finding would get the same
+  "patch it" response, the request is a penetration test and is redirected.</li>
+  <li><code>data_class</code> is <code>public-reference</code> (open CTI) or
+  <code>engagement-sensitive</code> (anything tied to a target). When unsure, choose
+  <code>engagement-sensitive</code>.</li>
+  <li>It refuses without a scope reference and a valid data class, and writes no record.</li>
+  <li><strong>Gate 1</strong> is the Scoping Document sign-off: the Stakeholder, Operations Lead,
+  Assessment Lead, and the CISO. The CISO may approve asynchronously, but the gate does not clear
+  without it. The objective intent locks at sign-off; a later change to intent is a material change
+  requiring stakeholder re-approval. Nothing downstream runs without a signed <code>#scoping</code> block.</li>
+</ul>
+
+<h3>2. Intel (/rt-intel, Phase 2: Threat Intelligence and Objective Design)</h3>
+<p>Under a signed Scoping Document, point it at your CTI, advisories, and the Generic Threat Landscape. It
+selects an intelligence-justified threat actor per objective, maps that actor's ATT&amp;CK/ATLAS/AADAPT
+techniques with verbatim citations, validates every ID and name with <code>validate.py</code>, records the
+excluded techniques and intelligence gaps, confirms the engagement type, and writes the Threat Profile
+Brief. It enriches the approach to the signed objectives; it does not change their intent. Markdown, HTML,
+and text are read directly; a <code>.docx</code> source is converted to markdown with pandoc and a
+<code>.pdf</code> with pdfplumber (the original is moved to a sibling <code>_ingested/</code> so it is not
+re-read). On an <code>engagement-sensitive</code> run the source content stays local; only the public
+catalog is fetched.</p>
+
+<h3>3. Verify (/rt-verify, target threat-profile)</h3>
+<p>Run it in a fresh context so it does not see the producing skill's reasoning. Under Claude Code the
+skill dispatches the <code>rt-engagement-verifier</code> agent (installed with
+<code>make install-agents</code>) for that context; on Codex, start a fresh session. <code>rt-verify</code>
+reviews one section per run; its targets are <code>scoping</code>, <code>threat-profile</code>,
+<code>planning</code>, and <code>report</code>. It re-derives each reviewed item from the artifact, the
+cited sources, and a fresh catalog fetch, and gates fail-closed. The section is <code>ready</code> only
+when every reviewed item is confirmed. Run it after scoping (step 1), after this threat profile, after
+planning, and after the report.</p>
+
+<h3>4. Emulate (/rt-emulate, Phase 3: Attack Planning)</h3>
+<p>From the signed objectives and the Threat Profile it builds the Engagement Planning Pack Part A: a
+hypothesized attack path per objective, each step a validated, actor-consistent technique with a detection
+risk, a branch if blocked, and a marked assumption. It references (does not author) the human-owned
+infrastructure plan, procurement plan, signed Rules of Engagement, and legal/third-party authorizations,
+and records the <strong>Gate 2</strong> (Rules of Engagement) sign-off that authorizes execution. Gate 2
+requires the same four approvers, plus the legal signer and authorizations where physical operations or
+third-party systems are in scope, and a verified safeguard for every transaction-adjacent path. Run
+<code>/rt-verify</code> with <code>target: planning</code> to gate it. The attack path is a planning
+hypothesis, not an execution script; <code>rt-emulate</code> executes nothing.</p>
+
+<h3>5. Adapt (/rt-adapt, Phase 4: Execution and Live Testing)</h3>
+<p>During live execution it confirms the entry criteria (Gate 2 cleared, safeguards active, SOC blind for a
+red team operation, C2 separated), then structures and appends the contemporaneous engagement log as the
+operator acts. When a technique is blocked or detected it proposes ranked, validated variant options
+(decision support only, human on the trigger). It records detection observations, deconfliction,
+deviations, disclosures, target cleanup, attacker infrastructure, and recovered secrets (never the value),
+and writes the Execution Record. The log is a live human record: <code>rt-adapt</code> appends what the
+operator reports and never fabricates or back-fills it. Fast and local; no autonomous execution.</p>
+
+<h3>6. Report (/rt-report, Phase 5: Reporting)</h3>
+<p>After execution concludes, it measures unaided detection and produces the human report.
+<strong>Unaided detection is the measure:</strong> the Blue Team Account (the SOC's own account) is captured first, before any disclosure, from the SOC's own experience. The Detection Analysis
+reconciles it against the Execution Record, with the blue team's account attributed separately. Findings
+name systems, controls, and processes and <strong>never an individual</strong> (non-attribution); each
+carries a recommended remediation and a validated NIST CSF / NIST SP 800-53 control-domain mapping.
+Severity and materiality are human determinations (materiality by the Operations Lead);
+<code>rt-report</code> records them, it does not set them. Material findings escalate to the CISO. It
+renders the Engagement Report and the Executive Summary under
+<code>engagements/&lt;id&gt;/deliverables/</code>, then runs the style checker and (where pandoc is
+present) renders editable docx. Machine formats are optional and additive, not required.</p>
+
+<h3>7. Handoff (/rt-handoff, Phase 6: Handoff and Closure)</h3>
+<p>With findings established in the report, it routes each finding into the enterprise system that will own
+it (technical vulnerabilities to vulnerability management, control or process failures to control
+tracking), records the entry reference, and carries the recommended remediation verbatim from the report.
+It hands the retest team its test cases and PoCs scoped per finding, confirms target cleanup and
+attacker-infrastructure decommission, sets the evidence disposition, and closes the engagement tracker. The
+tracker closes only when cleanup and decommission are both confirmed and every finding has been entered.
+The red team hands findings off; it does not own remediation status or run the retest. This is the closing
+phase; there is no downstream <code>rt-*</code> skill.</p>
+
+<h2>Standalone: vulnerability exposure (/rt-exposure)</h2>
+<p>Separate from a full engagement, <code>/rt-exposure</code> (alias <code>rt-vuln</code>) provides
+subject-matter expertise on a newly disclosed vulnerability. It is standalone: no <code>rt-govern</code>
+authorization, no engagement artifact. It reads the advisory/CVE files you give it (md/html/pdf/txt,
+converted locally like <code>rt-intel</code>) and writes its own assessment under
+<code>exposures/&lt;vuln-id&gt;/exposure.md</code>.</p>
+<p>Run <code>/rt-exposure</code> with the source files, a <code>vuln_ref</code> (the CVE/advisory id), a
+<code>data_class</code> (usually <code>public-reference</code> for a public CVE), and optionally your
+critical functions and affected assets. It:</p>
+<ol>
+  <li>Dissects the vulnerability: the weakness (CWE), affected surface, exploitation path mapped to
+  ATT&amp;CK/ATLAS/AADAPT, and severity signals (CVSS/EPSS/KEV), each grounded in a verbatim quote.</li>
+  <li>Assesses exposure (exposed / not-exposed / uncertain) against your scope.</li>
+  <li>Proposes compensating controls, each mapped to a NIST CSF and/or NIST SP 800-53 control domain, with
+  an explicit "limits exposure by ..." claim and a stated residual risk.</li>
+  <li>Gates on two independent verifiers dispatched in fresh contexts (<code>rt-exposure-verifier</code>,
+  target <code>dissection</code> then <code>controls</code>). Where the data class permits they run on a
+  different model than the producer for uncorrelated errors. The assessment is ready only when both gate
+  fail-closed.</li>
+</ol>
+<p>Every technique and control ID is validated by <code>validate.py</code> (NIST CSF and NIST SP 800-53 are
+vendored catalogs, checked fail-closed by exact name). A control that does not counter an identified
+technique, or claims zero residual risk, is refuted by the control-adequacy verifier. See
+<code>skills/rt-exposure/SKILL.md</code>.</p>
+
+<h2>Running the helpers</h2>
+<p>All commands run from <code>skills/_shared/scripts</code>.</p>
+<pre><code># Validate technique or control mappings against catalog data (a JSON list of {id, framework, name})
+python3 validate.py --entries entries.json
+
+# Force a fresh catalog fetch (rt-verify uses this for independence)
+python3 validate.py --entries entries.json --refresh
+
+# The deterministic release gate over a #verification block, with coverage of the expected ids
+python3 validate.py --gate verification.json --expect-ids ids.json
+
+# Catalog freshness: versions of every catalog, and whether AADAPT is behind its source
+python3 validate.py --catalog-info
+
+# Re-sync a vendored catalog when its source ships a new version (each prints a review diff)
+python3 sync_aadapt.py        # AADAPT
+python3 sync_nist80053.py     # NIST SP 800-53 Rev 5
+python3 sync_csf.py           # NIST CSF 2.0
+
+# Convert a .docx source to markdown and archive the original (requires pandoc)
+python3 pandoc_convert.py to-markdown /path/to/advisory.docx --archive
+
+# Convert a .pdf source to page-numbered markdown and archive the original (requires pdfplumber)
+python3 pdf_convert.py to-markdown /path/to/advisory.pdf --archive
+
+# Render markdown documents to editable docx (requires pandoc)
+python3 pandoc_convert.py to-docx ../../../engagements/&lt;id&gt;/deliverables/*.md</code></pre>
+<p>The <code>--entries</code> flag reads a JSON list from a file; each item is <code>{ "id" (or
+"technique_id"), "framework", "name" (optional) }</code>. With no name it validates the id only. The
+offensive frameworks are <code>attack</code>, <code>atlas</code>, and <code>aadapt</code>; the control
+frameworks are <code>nist-csf</code> and <code>nist-800-53</code>.</p>
+<p>Machine formats are optional and additive. <code>export.py</code> produces JSON, a STIX 2.1 bundle, and
+ATT&amp;CK Navigator layers from the validated artifact; it is being updated for the v3 schema in a later
+tooling pass, so do not rely on its current output shape. See
+<code>skills/rt-report/references/machine-formats.md</code>.</p>
+
+<h2>Reading verdicts</h2>
+<ul>
+  <li><code>confirmed</code>: the ID validates and (if a name was given) matches; a reviewed item's
+  cited quote resolves and supports the mapping.</li>
+  <li><code>refuted</code>: unknown or wrong-type ID, name mismatch, or an unsupported quote
+  (<code>unknown-id</code>, <code>wrong-id-type</code>, <code>name-mismatch</code>).</li>
+  <li><code>unverifiable</code>: the catalog was unreachable, or no citation resolves.</li>
+</ul>
+<div class="note">The gate is fail closed. <code>validate.py --gate</code> returns <code>ready: true</code>
+only when there is at least one verdict, every verdict is confirmed, and (with <code>--expect-ids</code>)
+the verdicts cover every expected id, so dropping a failing item cannot pass. An empty set never passes.
+Each verdict carries a <code>catalog_version</code> for the audit trail.</div>
+
+<h2>Data-class handling</h2>
+<ul>
+  <li><code>public-reference</code>: source excerpts may leave the machine under scope.</li>
+  <li><code>engagement-sensitive</code>: do not send source content anywhere; <code>validate.py</code>
+  fetches only the public catalog.</li>
+</ul>
+<div class="note">Honest limit: with a hosted model the reasoning itself sends the source to the model
+provider, so "local" means no egress beyond the authorized model host. For a hard guarantee, run a local
+model and keep the verify context on the same authorized boundary.</div>
+
+<h2>Troubleshooting</h2>
+<table>
+  <tr><th>Symptom</th><th>What it means / what to do</th></tr>
+  <tr><td>All items <code>unverifiable</code> with a catalog error</td><td>The framework sources were unreachable. Fail-closed; restore network and retry. The run stays gated until the catalog loads.</td></tr>
+  <tr><td><code>validate.py</code> exits non-zero</td><td>Expected whenever any item is not confirmed. A fail-closed signal, not a crash.</td></tr>
+  <tr><td><code>--catalog-info</code> warns AADAPT is stale</td><td>Run <code>python3 sync_aadapt.py</code>, review the diff, commit the regenerated catalog.</td></tr>
+  <tr><td>A quote will not resolve</td><td>It must be a verbatim substring of the source the agent read.</td></tr>
+</table>
+
+<h2>Confirm the tooling</h2>
+<pre><code>make test
+cd skills/_shared/scripts &amp;&amp; python3 validate.py --catalog-info</code></pre>
+
+<footer>
+Red Team Operating Model, operational runbook. Companion documents: architecture.html and
+product-overview.html.
+</footer>
+</div>
+</body>
+</html>

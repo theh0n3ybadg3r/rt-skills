@@ -1,0 +1,12 @@
+[
+  {"id": "T1566.001", "framework": "attack", "name": "Spearphishing Attachment",
+   "_expect": "confirmed"},
+  {"id": "T1055", "framework": "attack", "name": "Phishing",
+   "_expect": "refuted (A3 name-mismatch)"},
+  {"id": "TA0001", "framework": "attack", "name": "Initial Access",
+   "_expect": "refuted (wrong-id-type: tactic, not technique)"},
+  {"id": "T9999", "framework": "attack", "name": "Nonexistent",
+   "_expect": "refuted (unknown-id)"},
+  {"id": "AML.T0051", "framework": "atlas", "name": "LLM Prompt Injection",
+   "_expect": "confirmed (A4)"}
+]
