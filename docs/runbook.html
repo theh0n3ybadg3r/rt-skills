@@ -132,7 +132,7 @@ document conversion additionally needs pandoc (docx) or pdfplumber (pdf).</p>
   <tr><td>2. Threat Intelligence and Objective Design</td><td><code>rt-intel</code></td><td>The Threat Profile Brief</td></tr>
   <tr><td>3. Attack Planning</td><td><code>rt-emulate</code></td><td>The Engagement Planning Pack Part A and the Gate 2 sign-off</td></tr>
   <tr><td>4. Execution and Live Testing</td><td><code>rt-adapt</code></td><td>The Execution Record</td></tr>
-  <tr><td>5. Reporting</td><td><code>rt-report</code></td><td>The Engagement Report, Executive Summary, and Blue Team Account</td></tr>
+  <tr><td>5. Reporting</td><td><code>rt-report</code></td><td>The Engagement Report and Executive Summary (reconciled against the SOC's Blue Team Account)</td></tr>
   <tr><td>6. Handoff and Closure</td><td><code>rt-handoff</code></td><td>Findings routed to the enterprise systems; the tracker closed</td></tr>
 </table>
 <p><code>rt-verify</code> is cross-cutting (it gates a phase output fail-closed) and <code>rt-exposure</code>
@@ -145,6 +145,34 @@ required approver and may approve asynchronously, but no gate clears without it.
   <li><strong>Gate 2</strong> is the Rules of Engagement sign-off (Phase 3). It approves <em>how</em> the
   engagement runs and authorizes execution.</li>
 </ul>
+
+<h2>Artifacts: who produces each</h2>
+<p>Only the intake is hand-authored by the operator. Knowing which of three groups an artifact belongs to
+tells you who has to produce it:</p>
+<ul>
+  <li><strong>Operator inputs</strong> you supply: the intake and the intel sources.</li>
+  <li><strong>Skill-built</strong> artifacts the skills create and grow for you: the engagement artifact
+  (<code>engagement.md</code>), the rendered report, and the optional machine formats. You do not hand-write
+  <code>engagement.md</code>; <code>rt-govern</code> creates it and each later skill appends only its own
+  section.</li>
+  <li><strong>Human-owned</strong> deliverables the skills only point at: the Rules of Engagement, the
+  infrastructure and procurement plans, the legal and third-party authorizations, and the Blue Team Account.
+  A skill records a reference to each; it never writes them, because they carry authorization and operational
+  commitments a person signs for.</li>
+</ul>
+<table>
+  <tr><th>Artifact</th><th>Produced by</th><th>Phase</th><th>Skill relationship</th><th>Location</th></tr>
+  <tr><td>Intake (<code>intake.md</code>)</td><td>Operator (fills <code>templates/INTAKE.md</code>)</td><td>before 1</td><td><code>rt-govern</code> reads it</td><td><code>engagements/&lt;id&gt;/intake.md</code></td></tr>
+  <tr><td>Intel sources (CTI, advisories)</td><td>Operator supplies</td><td>2 (input)</td><td><code>rt-intel</code> reads them; never invents</td><td>provided paths or ids</td></tr>
+  <tr><td>Engagement artifact (<code>engagement.md</code>)</td><td>The skills, section by section</td><td>1 through 6</td><td><code>rt-govern</code> creates it and writes <code>#scoping</code>; each later skill appends only its own section; <code>rt-verify</code> writes <code>#verification</code></td><td><code>engagements/&lt;id&gt;/engagement.md</code></td></tr>
+  <tr><td>Rules of Engagement (Gate 2)</td><td>Human team, signed</td><td>3</td><td><code>rt-emulate</code> references it (<code>rules_of_engagement_ref</code>); does not author it</td><td>your files; referenced</td></tr>
+  <tr><td>Infrastructure plan (Planning Pack Part B) and procurement plan (Part C)</td><td>Human team</td><td>3</td><td><code>rt-emulate</code> references them (<code>infrastructure_plan_ref</code>, <code>procurement_plan_ref</code>); does not author them</td><td>your files; referenced</td></tr>
+  <tr><td>Legal and third-party authorizations</td><td>Legal and system owners</td><td>3 (Gate 2)</td><td>recorded in <code>authorizations</code>; referenced</td><td>your files; referenced</td></tr>
+  <tr><td>Blue Team Account</td><td>The SOC, before any disclosure</td><td>5</td><td><code>rt-report</code> records it and a <code>ref</code>; does not invent it</td><td>retained deliverable; referenced</td></tr>
+  <tr><td>Engagement Report and Executive Summary</td><td><code>rt-report</code> renders them</td><td>5</td><td>authored from the record</td><td><code>engagements/&lt;id&gt;/deliverables/*.{md,html}</code></td></tr>
+  <tr><td>Machine formats (JSON, STIX 2.1, Navigator)</td><td><code>export.py</code> (optional)</td><td>5</td><td>optional and additive</td><td><code>engagements/&lt;id&gt;/deliverables/machine/</code></td></tr>
+  <tr><td>Handoff and closure record</td><td><code>rt-handoff</code></td><td>6</td><td>writes <code>#handoff</code></td><td>in <code>engagement.md</code></td></tr>
+</table>
 
 <h2>Typical engagement (end to end)</h2>
 <p>The arc of one engagement. The verify gates are the point: no generated artifact is trusted until an

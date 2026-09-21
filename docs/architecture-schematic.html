@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red Team Skills - Architecture Schematic</title>
+<style>
+  :root {
+    --paper:#e7ebf1; --sheet:#f5f7fa; --grid:#d3dae4; --rule:#9aa7b6;
+    --ink:#1b2531; --ink-2:#4a5766; --ink-3:#77828f; --accent:#c2452a; --node:#ffffff;
+    --proven:#1f8a55; --attempted:#b06a00; --potential:#35679c; --blocked:#78838f;
+    --sans:"Helvetica Neue",Helvetica,"Segoe UI",Arial,system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --hair:1px;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --paper:#061d30; --sheet:#0a2a44; --grid:#123a5c; --rule:#2c6591;
+    --ink:#d8e8f7; --ink-2:#a5c6e0; --ink-3:#6f97ba; --accent:#ff8256; --node:#0c3252;
+    --proven:#56d996; --attempted:#f2b43c; --potential:#74b6f0; --blocked:#7593ac;
+  }}
+  :root[data-theme="light"]{--paper:#e7ebf1;--sheet:#f5f7fa;--grid:#d3dae4;--rule:#9aa7b6;--ink:#1b2531;--ink-2:#4a5766;--ink-3:#77828f;--accent:#c2452a;--node:#fff;--proven:#1f8a55;--attempted:#b06a00;--potential:#35679c;--blocked:#78838f;}
+  :root[data-theme="dark"]{--paper:#061d30;--sheet:#0a2a44;--grid:#123a5c;--rule:#2c6591;--ink:#d8e8f7;--ink-2:#a5c6e0;--ink-3:#6f97ba;--accent:#ff8256;--node:#0c3252;--proven:#56d996;--attempted:#f2b43c;--potential:#74b6f0;--blocked:#7593ac;}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper)}
+  body{font-family:var(--mono);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;padding:26px 20px 40px}
+  .drawing{max-width:1180px;margin:0 auto}
+  .sheet{position:relative;background:linear-gradient(var(--grid) var(--hair),transparent var(--hair)) 0 0/100% 23px,linear-gradient(90deg,var(--grid) var(--hair),transparent var(--hair)) 0 0/23px 100%,var(--sheet);border:1.5px solid var(--rule);padding:30px 34px 26px;margin-bottom:30px}
+  .sheet::after{content:"";position:absolute;inset:8px;border:var(--hair) solid var(--rule);opacity:.55;pointer-events:none}
+  .corner{position:absolute;width:13px;height:13px;border:1.5px solid var(--accent);z-index:2}
+  .corner.tl{top:8px;left:8px;border-right:0;border-bottom:0}.corner.tr{top:8px;right:8px;border-left:0;border-bottom:0}
+  .corner.bl{bottom:8px;left:8px;border-right:0;border-top:0}.corner.br{bottom:8px;right:8px;border-left:0;border-top:0}
+  .sheet>*{position:relative;z-index:1}
+  .head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .eyebrow{font-size:10.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--ink-2);margin:0 0 12px;font-weight:600}
+  .stamp{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--accent);border:1.5px solid var(--accent);border-radius:2px;padding:4px 8px;transform:rotate(-1.5deg);white-space:nowrap}
+  h1{font-family:var(--sans);font-weight:800;font-size:clamp(24px,3.6vw,37px);letter-spacing:-.015em;line-height:1.02;margin:0 0 10px;color:var(--ink);text-wrap:balance;max-width:20ch}
+  .lede{font-family:var(--sans);color:var(--ink-2);font-size:14px;max-width:68ch;margin:0 0 22px}
+  hr.div{border:0;border-top:var(--hair) solid var(--rule);margin:0 0 24px;opacity:.7}
+  .flow{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;align-items:start}
+  @media (max-width:820px){.flow{grid-template-columns:1fr}}
+  .ladder{display:flex;flex-direction:column;align-items:stretch}
+  .node{display:grid;grid-template-columns:58px 1fr;border:1.4px solid var(--rule);background:var(--node)}
+  .node .stn{border-right:1.4px solid var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;gap:4px;background:color-mix(in srgb,var(--node) 88%,var(--rule))}
+  .stn .num{font-family:var(--sans);font-weight:800;font-size:19px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+  .stn .tac{font-size:8.5px;letter-spacing:.08em;color:var(--ink-3);text-align:center}
+  .node .body{padding:11px 14px;min-width:0}
+  .node .body h3{font-family:var(--sans);font-weight:700;font-size:14.5px;margin:0 0 3px;letter-spacing:-.01em;color:var(--ink)}
+  .node .body p{margin:0;color:var(--ink-2);font-size:12px}
+  .node .body .file{color:var(--ink-3);font-size:11px}
+  .link{position:relative;height:40px}
+  .link::before{content:"";position:absolute;left:28px;top:0;bottom:8px;width:var(--hair);background:var(--rule)}
+  .link::after{content:"";position:absolute;left:24px;bottom:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--rule)}
+  .link .elabel{position:absolute;left:46px;top:50%;transform:translateY(-50%);font-size:10.5px;letter-spacing:.04em;color:var(--ink-3);text-transform:uppercase}
+  .node.gate{border-color:var(--accent);border-width:1.6px}
+  .node.gate .stn{background:color-mix(in srgb,var(--accent) 14%,var(--node));border-right-color:var(--accent)}
+  .node.gate .body h3{color:var(--accent)}
+  .node.gate .sym{width:26px;height:26px}
+  .node.gate .sym line,.node.gate .sym circle,.node.gate .sym path{stroke:var(--accent)}
+  .gate .tag{display:inline-block;font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:2px;padding:1px 5px;margin-top:5px}
+  .aside{display:flex;flex-direction:column;gap:20px}
+  .keybox{border:1.4px solid var(--rule);background:var(--node)}
+  .keybox h4{font-family:var(--sans);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;margin:0;padding:8px 12px;border-bottom:1.4px solid var(--rule);color:var(--ink-2);font-weight:700}
+  .keyrow{display:grid;grid-template-columns:16px 1fr;gap:9px;align-items:start;padding:9px 12px;border-bottom:var(--hair) solid var(--grid)}
+  .keyrow:last-child{border-bottom:0}
+  .swatch{width:13px;height:13px;margin-top:2px;border:1px solid rgba(0,0,0,.25)}
+  .kw{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.02em}
+  .kd{color:var(--ink-2);font-size:11px;display:block;margin-top:1px}
+  .v-proven .swatch{background:var(--proven)}.v-proven .kw{color:var(--proven)}
+  .v-attempted .swatch{background:var(--attempted)}.v-attempted .kw{color:var(--attempted)}
+  .v-potential .swatch{background:var(--potential)}.v-potential .kw{color:var(--potential)}
+  .v-blocked .swatch{background:var(--blocked)}.v-blocked .kw{color:var(--blocked)}
+  .note{border-left:2.5px solid var(--accent);padding:2px 0 2px 12px}
+  .note b{color:var(--ink);font-family:var(--sans)}.note p{margin:0;color:var(--ink-2);font-size:12px}
+  .xsection{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;align-items:start}
+  @media (max-width:820px){.xsection{grid-template-columns:1fr}}
+  .stack{display:flex;flex-direction:column}
+  .layer{border:1.4px solid var(--rule);background:var(--node);padding:13px 16px}
+  .layer h3{font-family:var(--sans);font-weight:800;font-size:15px;margin:0 0 3px;letter-spacing:-.01em}
+  .layer .role{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+  .layer p{margin:0;color:var(--ink-2);font-size:12px}
+  .boundary{position:relative;margin:0;padding:7px 14px;text-align:center;font-family:var(--sans);font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:repeating-linear-gradient(45deg,transparent 0 9px,color-mix(in srgb,var(--accent) 16%,transparent) 9px 18px);border-top:2px solid var(--accent);border-bottom:2px solid var(--accent)}
+  .scopes{display:grid;grid-template-columns:repeat(3,1fr);border:1.4px solid var(--rule);border-top:0}
+  .scope{padding:11px 12px;text-align:center;border-right:var(--hair) solid var(--rule)}
+  .scope:last-child{border-right:0}
+  .scope .sname{font-family:var(--sans);font-weight:700;font-size:12.5px}
+  .scope small{color:var(--ink-3);font-size:10.5px}
+  .drop{text-align:center;color:var(--rule);line-height:1;font-size:15px;padding:3px 0}
+  .callouts{display:flex;flex-direction:column;gap:16px}
+  .co{border:1.4px solid var(--rule);background:var(--node)}
+  .co h4{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin:0;padding:7px 11px;border-bottom:1.4px solid var(--rule);color:var(--ink);font-weight:700}
+  .co ul{margin:0;padding:8px 11px 9px 26px}.co li{margin:3px 0;color:var(--ink-2);font-size:11.5px}
+  .titleblock{margin-top:26px;margin-left:auto;width:max-content;max-width:100%;border:1.5px solid var(--ink-2);display:grid;grid-template-columns:repeat(4,minmax(88px,auto));font-size:11px}
+  .tb{border-right:var(--hair) solid var(--rule);border-bottom:var(--hair) solid var(--rule);padding:6px 11px}
+  .tb:nth-child(4n){border-right:0}
+  .tb .l{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:2px}
+  .tb .v{font-family:var(--sans);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .tb.wide{grid-column:span 2}
+  .tb.proj{grid-column:span 4;border-bottom:1.4px solid var(--ink-2)}.tb.proj .v{font-size:14px;letter-spacing:.02em}
+  code{font-family:var(--mono);font-size:11.5px;color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,transparent);padding:.5px 4px;border-radius:2px}
+  .detailnote{font-size:11px;color:var(--ink-3);letter-spacing:.04em;margin:-6px 0 20px}
+  .detailnote b{color:var(--accent);font-family:var(--sans);font-weight:700;letter-spacing:.1em}
+  .lanes{display:grid;grid-template-columns:46px 1fr 1fr 1fr;margin-bottom:2px}
+  .lanes .lh{text-align:center;font-family:var(--sans);font-weight:800;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:7px 4px;border:1.4px solid var(--rule);background:var(--node);margin-left:-1px}
+  .lanes .lh:first-of-type{margin-left:0}
+  .lanes .lh.agent{color:var(--potential)}.lanes .lh.operator{color:var(--accent)}
+  .seq{position:relative;padding-top:6px}
+  .rail{position:absolute;top:0;bottom:0;width:var(--hair);background:var(--rule);opacity:.8;z-index:0}
+  .rail.r1{left:calc(46px + (100% - 46px)/6)}.rail.r2{left:calc(46px + (100% - 46px)/2)}.rail.r3{left:calc(46px + (100% - 46px)*5/6)}
+  .step{position:relative;z-index:1;display:grid;grid-template-columns:46px 1fr 1fr 1fr;align-items:center;min-height:58px}
+  .step .t{font-size:10px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right;padding-right:9px}
+  .conn{align-self:center}
+  .conn .cap{display:block;font-family:var(--sans);font-weight:600;font-size:11.5px;text-align:center;padding:0 8px 5px;color:var(--ink);line-height:1.25}
+  .conn .cap small{display:block;font-family:var(--mono);font-weight:400;font-size:10px;color:var(--ink-3);margin-top:1px}
+  .conn .wire{display:block;border-top:1.4px solid var(--ink-2);position:relative}
+  .conn.toR .wire::after{content:"";position:absolute;right:-1px;top:-4.5px;border:5px solid transparent;border-left-color:var(--ink-2)}
+  .conn.toL .wire::after{content:"";position:absolute;left:-1px;top:-4.5px;border:5px solid transparent;border-right-color:var(--ink-2)}
+  .conn.dashed .wire{border-top-style:dashed}
+  .conn.accent .wire{border-top-color:var(--accent)}.conn.accent.toR .wire::after{border-left-color:var(--accent)}.conn.accent.toL .wire::after{border-right-color:var(--accent)}.conn.accent .cap{color:var(--accent)}
+  .m-ab{grid-column:2/4}.m-bo{grid-column:3/5}
+  .act{grid-column:3/4;justify-self:center;background:var(--node);border:1.4px solid var(--rule);padding:7px 13px;text-align:center;font-family:var(--sans);font-weight:600;font-size:11.5px;color:var(--ink)}
+  .act small{display:block;font-family:var(--mono);font-weight:400;color:var(--ink-3);font-size:10px;margin-top:2px}
+  .act.gate{border-color:var(--accent);color:var(--accent)}
+  .outcomes{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}
+  .oc{border:1.4px solid var(--rule);border-top-width:4px;background:var(--node);padding:10px 12px}
+  .oc .ocn{font-family:var(--sans);font-weight:800;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+  .oc p{margin:3px 0 0;font-size:11px;color:var(--ink-2)}
+  .oc.p-proven{border-top-color:var(--proven)}.oc.p-proven .ocn{color:var(--proven)}
+  .oc.p-attempted{border-top-color:var(--attempted)}.oc.p-attempted .ocn{color:var(--attempted)}
+  .oc.p-potential{border-top-color:var(--potential)}.oc.p-potential .ocn{color:var(--potential)}
+  .oc.p-blocked{border-top-color:var(--blocked)}.oc.p-blocked .ocn{color:var(--blocked)}
+  @media (max-width:560px){.titleblock{grid-template-columns:repeat(2,1fr)}.tb.proj{grid-column:span 2}.tb:nth-child(4n){border-right:var(--hair) solid var(--rule)}.scopes{grid-template-columns:1fr}.scope{border-right:0;border-bottom:var(--hair) solid var(--rule)}.outcomes{grid-template-columns:1fr 1fr}.rail{display:none}}
+</style>
+</head>
+<body>
+<div class="drawing">
+
+  <!-- ===================== SHEET 1 : ARCHETYPE A - PROCESS FLOW ===================== -->
+  <section class="sheet">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div class="head">
+      <div><p class="eyebrow">Engagement lifecycle &middot; process flow</p><h1>The six-phase engagement pipeline</h1></div>
+      <span class="stamp">Schematic</span>
+    </div>
+    <p class="lede">An intake request moves through six phases to a verified report; nothing advances until an independent context re-checks the work and its fail-closed gate opens.</p>
+    <hr class="div">
+
+    <div class="flow">
+      <div class="ladder">
+
+        <div class="node">
+          <div class="stn"><span class="num">01</span><span class="tac">SCOPING</span></div>
+          <div class="body"><h3>rt-govern</h3><p>Turns the intake request into the Scoping Document and the Gate 1 sign-off. It authorizes what is tested; nothing downstream runs without it.</p><p class="file">engagement.md &middot; #scoping</p></div>
+        </div>
+        <div class="link"><span class="elabel">hand off</span></div>
+
+        <div class="node">
+          <div class="stn"><span class="num">02</span><span class="tac">THREAT INTEL</span></div>
+          <div class="body"><h3>rt-intel</h3><p>Selects an intelligence-justified threat actor per objective and maps each technique to ATT&amp;CK, ATLAS, or AADAPT with verbatim citations.</p><p class="file">#threat-profile</p></div>
+        </div>
+        <div class="link"><span class="elabel">gate the handoff</span></div>
+
+        <div class="node gate">
+          <div class="stn"><svg class="sym" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.6-3 7.7-7 9-4-1.3-7-4.4-7-9V6l7-3z"/><path d="M8.5 12l2.4 2.4L15.6 9"/></svg><span class="tac" style="color:var(--accent);font-weight:700">KEY</span></div>
+          <div class="body"><h3>rt-verify</h3><p>Cross-cutting. After scoping, threat-profile, planning, and report, a fresh context re-derives every item and gates fail-closed. A produced section is trusted only when it passes.</p><span class="tag" style="border-style:dashed">see Detail A &middot; sheet 3</span></div>
+        </div>
+        <div class="link"><span class="elabel">only if ready</span></div>
+
+        <div class="node">
+          <div class="stn"><span class="num">03</span><span class="tac">PLANNING</span></div>
+          <div class="body"><h3>rt-emulate</h3><p>Builds one hypothesized attack path per objective and records the Gate 2 Rules-of-Engagement sign-off that authorizes execution.</p><p class="file">#planning</p></div>
+        </div>
+        <div class="link"><span class="elabel">authorized</span></div>
+
+        <div class="node">
+          <div class="stn"><span class="num">04</span><span class="tac">EXECUTION</span></div>
+          <div class="body"><h3>rt-adapt</h3><p>Structures the contemporaneous log and proposes ranked variants. The human operator decides and executes; the skill executes nothing and never fabricates the log.</p><p class="file">#execution</p></div>
+        </div>
+        <div class="link"><span class="elabel">record</span></div>
+
+        <div class="node">
+          <div class="stn"><span class="num">05</span><span class="tac">REPORTING</span></div>
+          <div class="body"><h3>rt-report</h3><p>Reconciles the Execution Record against the SOC's Blue Team Account, captured before disclosure, to measure unaided detection.</p><p class="file">#report</p></div>
+        </div>
+        <div class="link"><span class="elabel">findings</span></div>
+
+        <div class="node">
+          <div class="stn"><span class="num">06</span><span class="tac">CLOSURE</span></div>
+          <div class="body"><h3>rt-handoff</h3><p>Routes each finding to the enterprise system that will own it, confirms cleanup, and closes the engagement tracker.</p><p class="file">#handoff</p></div>
+        </div>
+
+      </div>
+
+      <aside class="aside">
+        <div class="keybox"><h4>Verification state</h4>
+          <div class="keyrow v-proven"><span class="swatch"></span><div><span class="kw">Confirmed</span><span class="kd">Re-derived and holds; counts toward ready.</span></div></div>
+          <div class="keyrow v-attempted"><span class="swatch"></span><div><span class="kw">Unverifiable</span><span class="kd">Catalog unreachable or locator missing; gated, never passed.</span></div></div>
+          <div class="keyrow v-potential"><span class="swatch"></span><div><span class="kw">Pending</span><span class="kd">Produced, not yet independently checked.</span></div></div>
+          <div class="keyrow v-blocked"><span class="swatch"></span><div><span class="kw">Refuted</span><span class="kd">Quote fails to support the mapping, or an ID is wrong; halts.</span></div></div>
+        </div>
+        <div class="note"><p><b>Trust is enforced, not assumed.</b> Every section is re-derived in a context that never saw how it was produced, and the gate is fail-closed: unreachable or unresolved means halt, not pass.</p></div>
+      </aside>
+    </div>
+
+    <div class="titleblock">
+      <div class="tb proj"><span class="l">Project</span><span class="v">Red Team Skills</span></div>
+      <div class="tb"><span class="l">Sheet</span><span class="v">1 / 3</span></div>
+      <div class="tb"><span class="l">Rev</span><span class="v">v3</span></div>
+      <div class="tb"><span class="l">Scale</span><span class="v">operating model</span></div>
+      <div class="tb"><span class="l">Sheet title</span><span class="v">Pipeline</span></div>
+      <div class="tb wide"><span class="l">Skills</span><span class="v">6 phases + rt-verify + rt-exposure</span></div>
+      <div class="tb"><span class="l">Gates</span><span class="v">2</span></div>
+      <div class="tb"><span class="l">Verifier</span><span class="v">fail-closed</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== SHEET 2 : ARCHETYPE B - LAYERED CROSS-SECTION ===================== -->
+  <section class="sheet">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div class="head">
+      <div><p class="eyebrow">Data-class boundary &middot; cross-section</p><h1>The data-class egress boundary</h1></div>
+      <span class="stamp">Section A-A</span>
+    </div>
+    <p class="lede">Engagement-sensitive content stays on the authorized side of one line; only public-reference data may cross it, and the public catalog fetch crosses carrying no source content at all.</p>
+    <hr class="div">
+
+    <div class="xsection">
+      <div class="stack">
+        <div class="layer"><p class="role">authorized host</p><h3>Engagement workspace</h3><p>The engagement artifact, the cited sources, and the agent's reasoning. Where scoping, intel, planning, execution, and reporting happen.</p></div>
+        <div class="drop">&#9662;</div>
+        <div class="boundary">Data-class egress boundary &middot; engagement-sensitive content does not cross</div>
+        <div class="drop">&#9662;</div>
+        <div class="layer"><p class="role">public internet</p><h3>External services</h3><p>MITRE catalogs for ID validation, the hosted-model endpoint, and an optional cross-vendor verifier.</p></div>
+        <div class="scopes">
+          <div class="scope"><span class="sname">public-reference</span><br><small>may cross the line</small></div>
+          <div class="scope"><span class="sname">engagement-sensitive</span><br><small>must not cross</small></div>
+          <div class="scope"><span class="sname">catalog fetch</span><br><small>allowed &middot; no source content</small></div>
+        </div>
+      </div>
+
+      <div class="callouts">
+        <div class="co"><h4>The honest limit</h4><ul>
+          <li>With a hosted model, reasoning already reaches the model host.</li>
+          <li>"Local" means no egress beyond the authorized host.</li>
+          <li>For a hard guarantee, run a local model.</li>
+        </ul></div>
+        <div class="co"><h4>Always allowed</h4><ul>
+          <li>The public catalog fetch (ATT&amp;CK, ATLAS) carries no source content.</li>
+          <li>So it is permitted on any data class, including engagement-sensitive.</li>
+        </ul></div>
+        <div class="co"><h4>Cross-vendor verify</h4><ul>
+          <li>A different provider is permitted only for public-reference data.</li>
+          <li>Engagement-sensitive verification stays on the authorized boundary.</li>
+        </ul></div>
+        <div class="co"><h4>Untrusted input</h4><ul>
+          <li>Ingested CTI and advisories are data to analyze, never instructions.</li>
+          <li>A source that appears to instruct the agent is a prompt-injection attempt.</li>
+        </ul></div>
+      </div>
+    </div>
+
+    <div class="titleblock">
+      <div class="tb proj"><span class="l">Project</span><span class="v">Red Team Skills</span></div>
+      <div class="tb"><span class="l">Sheet</span><span class="v">2 / 3</span></div>
+      <div class="tb"><span class="l">Rev</span><span class="v">v3</span></div>
+      <div class="tb"><span class="l">Scale</span><span class="v">trust boundary</span></div>
+      <div class="tb"><span class="l">Sheet title</span><span class="v">Section A-A</span></div>
+      <div class="tb wide"><span class="l">Boundary</span><span class="v">data-class egress</span></div>
+      <div class="tb"><span class="l">Classes</span><span class="v">2</span></div>
+      <div class="tb"><span class="l">Catalog fetch</span><span class="v">always OK</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== SHEET 3 : ARCHETYPE C - SWIMLANE SEQUENCE / DETAIL A ===================== -->
+  <section class="sheet">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div class="head">
+      <div><p class="eyebrow">Independent verification &middot; sequence</p><h1>Fail-closed verification handshake</h1></div>
+      <span class="stamp">Detail A</span>
+    </div>
+    <p class="lede">The rt-verify gate from sheet 1, enlarged: a fresh context re-derives every claim, and the release gate opens only when all of them hold and every expected ID is covered.</p>
+    <hr class="div">
+
+    <p class="detailnote"><b>DETAIL A</b> &middot; fail-closed verification of one produced section &middot; time flows top &rarr; bottom</p>
+    <div class="lanes"><div class="lhsp"></div><div class="lh agent">Producer skill</div><div class="lh broker">Verifier &middot; fresh context</div><div class="lh operator">Operator / release</div></div>
+    <div class="seq">
+      <span class="rail r1"></span><span class="rail r2"></span><span class="rail r3"></span>
+
+      <div class="step"><div class="t">t0</div>
+        <div class="conn m-ab toR"><span class="cap">Hand off the section<small>artifact block + cited sources, not the reasoning</small></span><span class="wire"></span></div>
+      </div>
+
+      <div class="step"><div class="t">t1</div>
+        <div class="act"><span>Re-derive independently<small>fresh context; re-read every cited source</small></span></div>
+      </div>
+
+      <div class="step"><div class="t">t2</div>
+        <div class="act"><span>Check IDs and quotes<small>validate.py: id shape &middot; live catalog &middot; verbatim locator</small></span></div>
+      </div>
+
+      <div class="step"><div class="t">t3</div>
+        <div class="conn m-bo toR"><span class="cap">Return per-item verdicts<small>confirmed &middot; refuted &middot; unverifiable</small></span><span class="wire"></span></div>
+      </div>
+
+      <div class="step"><div class="t">t4</div>
+        <div class="act gate"><span>validate.py --gate --expect-ids<small>ready only if all confirmed and every ID covered</small></span></div>
+      </div>
+
+      <div class="step"><div class="t">t5</div>
+        <div class="conn m-bo toR"><span class="cap">Gate result to the operator<small>advance, or a fail-closed halt for a human</small></span><span class="wire"></span></div>
+      </div>
+
+    </div>
+
+    <div class="outcomes">
+      <div class="oc p-proven"><span class="ocn">Confirmed &rarr; Ready</span><p>Every verdict confirmed and every expected ID covered. The section is trusted and the phase advances.</p></div>
+      <div class="oc p-attempted"><span class="ocn">Unverifiable &rarr; Gated</span><p>A catalog was unreachable or a locator would not resolve. Fail-closed: never silently passed.</p></div>
+      <div class="oc p-potential"><span class="ocn">Pending</span><p>Produced, but the independent pass has not run yet. Not trusted until it does.</p></div>
+      <div class="oc p-blocked"><span class="ocn">Refuted &rarr; Gated</span><p>A quote does not support its mapping, or an ID is wrong. The run halts for a human to resolve.</p></div>
+    </div>
+
+    <div class="titleblock">
+      <div class="tb proj"><span class="l">Project</span><span class="v">Red Team Skills</span></div>
+      <div class="tb"><span class="l">Sheet</span><span class="v">3 / 3</span></div>
+      <div class="tb"><span class="l">Rev</span><span class="v">v3</span></div>
+      <div class="tb"><span class="l">Scale</span><span class="v">mechanism</span></div>
+      <div class="tb"><span class="l">Sheet title</span><span class="v">Detail A</span></div>
+      <div class="tb wide"><span class="l">Mechanism</span><span class="v">independent verification</span></div>
+      <div class="tb"><span class="l">Verdicts</span><span class="v">3</span></div>
+      <div class="tb"><span class="l">Gate</span><span class="v">fail-closed</span></div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

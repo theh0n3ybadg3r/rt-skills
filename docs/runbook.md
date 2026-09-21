@@ -60,7 +60,7 @@ The engagement lifecycle begins at intake and runs six phases, each phase to one
 | 2. Threat Intelligence and Objective Design | `rt-intel` | The Threat Profile Brief |
 | 3. Attack Planning | `rt-emulate` | The Engagement Planning Pack Part A and the Gate 2 sign-off |
 | 4. Execution and Live Testing | `rt-adapt` | The Execution Record |
-| 5. Reporting | `rt-report` | The Engagement Report, Executive Summary, and Blue Team Account |
+| 5. Reporting | `rt-report` | The Engagement Report and Executive Summary (reconciled against the SOC's Blue Team Account) |
 | 6. Handoff and Closure | `rt-handoff` | Findings routed to the enterprise systems; the tracker closed |
 
 `rt-verify` is cross-cutting (it gates a phase output fail-closed) and `rt-exposure` is standalone (vulnerability SME, outside the lifecycle).
@@ -69,6 +69,27 @@ The engagement lifecycle begins at intake and runs six phases, each phase to one
 
 - **Gate 1** is the Scoping Document sign-off (Phase 1). It approves _what_ is tested.
 - **Gate 2** is the Rules of Engagement sign-off (Phase 3). It approves _how_ the engagement runs and authorizes execution.
+
+## Artifacts: who produces each
+
+Only the intake is hand-authored by the operator. Knowing which of three groups an artifact belongs to tells you who has to produce it:
+
+- **Operator inputs** you supply: the intake and the intel sources.
+- **Skill-built** artifacts the skills create and grow for you: the engagement artifact (`engagement.md`), the rendered report, and the optional machine formats. You do not hand-write `engagement.md`; `rt-govern` creates it and each later skill appends only its own section.
+- **Human-owned** deliverables the skills only point at: the Rules of Engagement, the infrastructure and procurement plans, the legal and third-party authorizations, and the Blue Team Account. A skill records a reference to each; it never writes them, because they carry authorization and operational commitments a person signs for.
+
+| Artifact | Produced by | Phase | Skill relationship | Location |
+| --- | --- | --- | --- | --- |
+| Intake (`intake.md`) | Operator (fills `templates/INTAKE.md`) | before 1 | `rt-govern` reads it | `engagements/<id>/intake.md` |
+| Intel sources (CTI, advisories) | Operator supplies | 2 (input) | `rt-intel` reads them; never invents | provided paths or ids |
+| Engagement artifact (`engagement.md`) | The skills, section by section | 1 through 6 | `rt-govern` creates it and writes `#scoping`; each later skill appends only its own section; `rt-verify` writes `#verification` | `engagements/<id>/engagement.md` |
+| Rules of Engagement (Gate 2) | Human team, signed | 3 | `rt-emulate` references it (`rules_of_engagement_ref`); does not author it | your files; referenced |
+| Infrastructure plan (Planning Pack Part B) and procurement plan (Part C) | Human team | 3 | `rt-emulate` references them (`infrastructure_plan_ref`, `procurement_plan_ref`); does not author them | your files; referenced |
+| Legal and third-party authorizations | Legal and system owners | 3 (Gate 2) | recorded in `authorizations`; referenced | your files; referenced |
+| Blue Team Account | The SOC, before any disclosure | 5 | `rt-report` records it and a `ref`; does not invent it | retained deliverable; referenced |
+| Engagement Report and Executive Summary | `rt-report` renders them | 5 | authored from the record | `engagements/<id>/deliverables/*.{md,html}` |
+| Machine formats (JSON, STIX 2.1, Navigator) | `export.py` (optional) | 5 | optional and additive | `engagements/<id>/deliverables/machine/` |
+| Handoff and closure record | `rt-handoff` | 6 | writes `#handoff` | in `engagement.md` |
 
 ## Typical engagement (end to end)
 
