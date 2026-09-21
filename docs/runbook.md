@@ -14,20 +14,24 @@ For the design, see `docs/architecture.html`. For the why, see `docs/product-ove
 
 ## Install (no plugin)
 
-The skills are plain files, not a plugin or marketplace, so there is nothing to publish or register. Claude Code auto-discovers skills from a skills directory; one `make` target symlinks them there so the `/rt-*` slash commands appear:
+The skills are plain files, not a plugin or marketplace, so there is nothing to publish or register. Both Claude Code and Codex discover skills from a directory of `SKILL.md` folders; `make` targets symlink these there. Claude Code registers `/rt-*` slash commands from `.claude/skills`; Codex scans `.agents/skills` and invokes the same skills as `$rt-*`:
 
 ```bash
-make install-skills                    # links skills/rt-* into ./.claude/skills (this repo)
+make install-skills                    # links skills/rt-* into ./.claude/skills (Claude Code)
 make install-skills SCOPE=personal     # links into ~/.claude/skills instead
 make uninstall-skills                  # remove the links
 make list-skills                       # show what is installed
+make install-codex-skills              # links skills/rt-* into ./.agents/skills (Codex)
+make install-codex-skills SCOPE=personal # links into ~/.agents/skills instead
+make uninstall-codex-skills            # remove the links
+make list-codex-skills                 # show what is installed
 make install-agents                    # links agents/rt-* into ./.claude/agents (the verifiers)
 make list-agents                       # show installed agents
 make new-engagement NAME=ENG-2026-020  # scaffold an engagement intake from the template
 make render-docx ENG=<id>              # render an engagement's deliverables + intake + engagement to docx (needs pandoc)
 ```
 
-Claude Code picks the skills up live (no restart); both explicit `/rt-govern` and automatic description-matched invocation then work. The links are gitignored, so `make install-skills` is a per-checkout step. Run the agent from the repo root so each skill's shared paths (`skills/_shared/...`) resolve.
+Claude Code picks the skills up live (no restart); both explicit `/rt-govern` and automatic description-matched invocation then work. On Codex, `make install-codex-skills` symlinks the same skills into `.agents/skills` (Codex scans it from the working directory up to the repo root and follows the links); restart Codex if they do not appear, then invoke a skill with a `$` mention (`$rt-govern`) or browse with `/skills`. There is no `/rt-govern` slash command in Codex, and Codex custom prompts (`~/.codex/prompts`) are deprecated. Both install dirs are gitignored, so `make install-skills` and `make install-codex-skills` are per-checkout steps. Run the agent from the repo root so each skill's shared paths (`skills/_shared/...`) resolve.
 
 `make install-agents` symlinks the verifier sub-agents (also under the gitignored `.claude/`, so it is a per-checkout step too): `rt-engagement-verifier` (dispatched by `rt-verify`) and `rt-exposure-verifier` (dispatched by `rt-exposure`). Each skill dispatches its verifier under Claude Code to get the independent context its trust gate requires; Codex has no equivalent named agent and uses a fresh `spawn_agent` or session instead, so it needs no agent install.
 
@@ -37,12 +41,12 @@ Give the agent the always-on operating context (guardrails and pipeline, in forc
 make install-agent-context DEST=.   # copies templates/CLAUDE.md + templates/AGENTS.md (refuses to clobber)
 ```
 
-`templates/CLAUDE.md` (Claude Code) and `templates/AGENTS.md` (Codex) carry the human-led guardrails (run `/rt-govern` first, no autonomous offensive execution, data-class egress limits, fail-closed independent verification, ingested CTI treated as untrusted data). They are operating context for an engagement project, separate from any coding-style `CLAUDE.md` you keep for development.
+`templates/CLAUDE.md` (Claude Code) and `templates/AGENTS.md` (Codex) carry the human-led guardrails (run `rt-govern` first, no autonomous offensive execution, data-class egress limits, fail-closed independent verification, ingested CTI treated as untrusted data). They are operating context for an engagement project, separate from any coding-style `CLAUDE.md` you keep for development.
 
 If you cannot or do not want to install even that:
 
-- Ask the agent directly: "read and follow `skills/rt-intel/SKILL.md`". No discovery, works anywhere in the repo.
-- On Codex, the shipped `AGENTS.md` adapter in each skill is read by Codex's own convention, no install.
+- Ask the agent directly: "read and follow `skills/rt-intel/SKILL.md` and run its Procedure". No discovery step, works anywhere in the repo on Claude Code or Codex.
+- The per-skill `AGENTS.md` files are directory operating-context pointers, not slash commands. Codex invocation comes from the skills being under `.agents/skills` (above); if you prefer not to use the make target, drop or commit the skill folders under `.agents/skills` yourself.
 
 Either way the bundled Python helpers run under plain `python3` regardless of how a skill is invoked; only document conversion additionally needs pandoc (docx) or pdfplumber (pdf).
 

@@ -8,6 +8,10 @@
 #   make install-skills SCOPE=personal # into ~/.claude/skills (available from this repo path)
 #   make uninstall-skills
 #   make list-skills
+#   make install-codex-skills         # symlink skills/rt-* into ./.agents/skills for Codex (invoke $rt-govern, or /skills)
+#   make install-codex-skills SCOPE=personal # into ~/.agents/skills
+#   make uninstall-codex-skills
+#   make list-codex-skills
 #   make install-agents               # symlink agents/rt-* into ./.claude/agents (project scope, this repo)
 #   make install-agents SCOPE=personal # into ~/.claude/agents (available from this repo path)
 #   make uninstall-agents
@@ -30,14 +34,16 @@ ifeq ($(SCOPE),personal)
   LINK_TARGET = $(REPO_ROOT)/skills/$(1)
   AGENTS_DIR := $(HOME)/.claude/agents
   AGENT_LINK_TARGET = $(REPO_ROOT)/agents/$(1).md
+  CODEX_SKILLS_DIR := $(HOME)/.agents/skills
 else
   SKILLS_DIR := $(REPO_ROOT)/.claude/skills
   LINK_TARGET = ../../skills/$(1)
   AGENTS_DIR := $(REPO_ROOT)/.claude/agents
   AGENT_LINK_TARGET = ../../agents/$(1).md
+  CODEX_SKILLS_DIR := $(REPO_ROOT)/.agents/skills
 endif
 
-.PHONY: install-skills uninstall-skills list-skills install-agents uninstall-agents list-agents new-engagement render-docx install-agent-context check-docs test format format-check
+.PHONY: install-skills uninstall-skills list-skills install-codex-skills uninstall-codex-skills list-codex-skills install-agents uninstall-agents list-agents new-engagement render-docx install-agent-context check-docs test format format-check
 
 # Copy the operating-context files (templates/CLAUDE.md + templates/AGENTS.md) into an engagement
 # project. DEST is the target project root. Refuses to clobber an existing CLAUDE.md or AGENTS.md.
@@ -84,6 +90,30 @@ uninstall-skills:
 list-skills:
 	@echo "Skills dir: $(SKILLS_DIR)"
 	@ls -l "$(SKILLS_DIR)" 2>/dev/null || echo "(nothing installed)"
+
+# Symlink skills/rt-* into a Codex Agent Skills directory it scans (.agents/skills, walked from the working
+# directory up to the repo root; Codex follows symlinks). The same SKILL.md files Claude Code uses are valid
+# Codex skills. In Codex, invoke a skill with a $ mention ($rt-govern) or browse with /skills; Codex can also
+# select one implicitly by its description. There is no /rt-govern slash command in Codex.
+install-codex-skills:
+	@mkdir -p "$(CODEX_SKILLS_DIR)"
+	@for s in $(RT_SKILLS); do \
+	  ln -sfn "$(call LINK_TARGET,$$s)" "$(CODEX_SKILLS_DIR)/$$s"; \
+	  echo "linked $(CODEX_SKILLS_DIR)/$$s"; \
+	done
+	@echo ""
+	@echo "Installed $(words $(RT_SKILLS)) skills into $(CODEX_SKILLS_DIR)."
+	@echo "Restart Codex if they do not appear, then invoke \$$rt-govern, \$$rt-intel, ... (or /skills to browse)."
+	@echo "Run Codex from the repo root so the skills' shared paths resolve."
+
+uninstall-codex-skills:
+	@for s in $(RT_SKILLS); do \
+	  rm -f "$(CODEX_SKILLS_DIR)/$$s" && echo "removed $(CODEX_SKILLS_DIR)/$$s"; \
+	done
+
+list-codex-skills:
+	@echo "Codex skills dir: $(CODEX_SKILLS_DIR)"
+	@ls -l "$(CODEX_SKILLS_DIR)" 2>/dev/null || echo "(nothing installed)"
 
 # Symlink the sub-agents (agents/rt-*.md) into a Claude Code agents directory it auto-discovers. rt-verify
 # dispatches rt-engagement-verifier and rt-exposure dispatches rt-exposure-verifier for their

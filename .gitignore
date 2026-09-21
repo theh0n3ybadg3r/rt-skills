@@ -4,6 +4,8 @@
 # ---- Local agent + dev environment (not shipped) ----
 # Skill install symlinks and any local Claude state (regenerate with `make install-skills`).
 /.claude/
+# Codex Agent Skills install symlinks (regenerate with `make install-codex-skills`). Machine-local.
+/.agents/
 # Devcontainer belongs to the local environment, not the product.
 /.devcontainer/
 # Root CLAUDE.md is dev-only coding guidelines. The shipped operating context is templates/CLAUDE.md

@@ -78,19 +78,30 @@ guide lives at <code>docs/runbook.md</code>.</p>
 
 <h2>Install (no plugin)</h2>
 <p>The skills are plain files, not a plugin or marketplace, so there is nothing to publish or register.
-Claude Code auto-discovers skills from a skills directory; one <code>make</code> target symlinks them
-there so the <code>/rt-*</code> slash commands appear:</p>
-<pre><code>make install-skills                    # links skills/rt-* into ./.claude/skills (this repo)
+Both Claude Code and Codex discover skills from a directory of <code>SKILL.md</code> folders;
+<code>make</code> targets symlink these there. Claude Code registers <code>/rt-*</code> slash commands from
+<code>.claude/skills</code>; Codex scans <code>.agents/skills</code> and invokes the same skills as
+<code>$rt-*</code>:</p>
+<pre><code>make install-skills                    # links skills/rt-* into ./.claude/skills (Claude Code)
 make install-skills SCOPE=personal     # links into ~/.claude/skills instead
 make uninstall-skills                  # remove the links
 make list-skills                       # show what is installed
+make install-codex-skills              # links skills/rt-* into ./.agents/skills (Codex)
+make install-codex-skills SCOPE=personal # links into ~/.agents/skills instead
+make uninstall-codex-skills            # remove the links
+make list-codex-skills                 # show what is installed
 make install-agents                    # links agents/rt-* into ./.claude/agents (the verifiers)
 make list-agents                       # show installed agents
 make new-engagement NAME=ENG-2026-020  # scaffold an engagement intake from the template
 make render-docx ENG=&lt;id&gt;              # render an engagement's deliverables + intake + engagement to docx (needs pandoc)</code></pre>
 <p>Claude Code picks the skills up live (no restart); both explicit <code>/rt-govern</code> and automatic
-description-matched invocation then work. The links are gitignored, so <code>make install-skills</code> is
-a per-checkout step. Run the agent from the repo root so each skill's shared paths
+description-matched invocation then work. On Codex, <code>make install-codex-skills</code> symlinks the same
+skills into <code>.agents/skills</code> (Codex scans it from the working directory up to the repo root and
+follows the links); restart Codex if they do not appear, then invoke a skill with a <code>$</code> mention
+(<code>$rt-govern</code>) or browse with <code>/skills</code>. There is no <code>/rt-govern</code> slash
+command in Codex, and Codex custom prompts (<code>~/.codex/prompts</code>) are deprecated. Both install dirs
+are gitignored, so <code>make install-skills</code> and <code>make install-codex-skills</code> are
+per-checkout steps. Run the agent from the repo root so each skill's shared paths
 (<code>skills/_shared/...</code>) resolve.</p>
 <p><code>make install-agents</code> symlinks the verifier sub-agents (also under the gitignored
 <code>.claude/</code>, so per-checkout too): <code>rt-engagement-verifier</code> (dispatched by
@@ -102,15 +113,16 @@ instead, so it needs no agent install.</p>
 fires) by placing the operating-context files at the project root:</p>
 <pre><code>make install-agent-context DEST=.   # copies templates/CLAUDE.md + templates/AGENTS.md (refuses to clobber)</code></pre>
 <p><code>templates/CLAUDE.md</code> (Claude Code) and <code>templates/AGENTS.md</code> (Codex) carry the
-human-led guardrails (run <code>/rt-govern</code> first, no autonomous offensive execution, data-class
+human-led guardrails (run <code>rt-govern</code> first, no autonomous offensive execution, data-class
 egress limits, fail-closed independent verification, ingested CTI treated as untrusted data). They are
 operating context for an engagement project, separate from any coding-style <code>CLAUDE.md</code> you
 keep for development.</p>
 <p>If you cannot or do not want to install even that: ask the agent to "read and follow
-<code>skills/rt-intel/SKILL.md</code>" (works anywhere in the repo), or on Codex rely on the shipped
-<code>AGENTS.md</code> adapter in each skill. Either way the bundled Python helpers run under plain
-<code>python3</code> regardless of how a skill is invoked; only document conversion additionally needs
-pandoc (docx) or pdfplumber (pdf).</p>
+<code>skills/rt-intel/SKILL.md</code> and run its Procedure" (works anywhere in the repo, on Claude Code or
+Codex). The per-skill <code>AGENTS.md</code> files are directory operating-context pointers, not slash
+commands; Codex invocation comes from the skills being under <code>.agents/skills</code> as above. Either way
+the bundled Python helpers run under plain <code>python3</code> regardless of how a skill is invoked; only
+document conversion additionally needs pandoc (docx) or pdfplumber (pdf).</p>
 
 <h2>The six phases and two gates</h2>
 <p>The engagement lifecycle begins at intake and runs six phases, each phase to one skill:</p>

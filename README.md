@@ -11,16 +11,17 @@ You invoke each phase as a slash command (`/rt-govern`, `/rt-intel`, ...). The s
 These are plain files, not a plugin or marketplace, so there is nothing to publish or register. Claude Code auto-discovers skills from a skills directory; one `make` target symlinks them there so the `/rt-*` commands appear:
 
 ```bash
-make install-skills                 # links skills/rt-* into ./.claude/skills (this repo)
+make install-skills                 # links skills/rt-* into ./.claude/skills (Claude Code)
 # make install-skills SCOPE=personal  # links into ~/.claude/skills instead
 # make uninstall-skills               # remove the links
+make install-codex-skills           # links skills/rt-* into ./.agents/skills (Codex)
 make install-agents                 # links agents/rt-* into ./.claude/agents (the verifiers)
 make new-engagement NAME=ENG-2026-020  # scaffold an engagement intake from the template
 ```
 
 `make install-agents` installs the sub-agents that the skills dispatch for their independent-context passes under Claude Code: `rt-engagement-verifier` (for `rt-verify`) and `rt-exposure-verifier` (for `rt-exposure`). Codex uses a fresh session instead, so it needs no agent install. Like the skills links, they live under the gitignored `.claude/`, so re-run it per machine.
 
-Claude Code picks the skills up live (no restart), and both explicit `/rt-govern` and automatic description-matched invocation work. Run the agent from the repo root so the skills' shared paths resolve. Two lower-effort paths need no install at all: ask the agent to "read and follow `skills/rt-intel/SKILL.md`", or, on Codex, rely on the shipped `AGENTS.md` adapters. See `docs/runbook.md` for the full guide.
+Claude Code picks the skills up live (no restart), and both explicit `/rt-govern` and automatic description-matched invocation work. On Codex, `make install-codex-skills` symlinks the same skills into `.agents/skills` (Codex scans that directory from the working dir up to the repo root and follows the links); restart Codex if they do not appear, then invoke a skill with a `$` mention (`$rt-govern`) or browse with `/skills`. Codex has no `/rt-govern` slash command. Both install dirs are gitignored, so the installs are per-checkout steps. Run the agent from the repo root so the skills' shared paths resolve. A zero-install fallback on either tool: ask the agent to "read and follow `skills/rt-intel/SKILL.md`". See `docs/runbook.md` for the full guide.
 
 To give the agent the always-on operating context (the guardrails and pipeline, in force before any skill fires), place the operating-context files at the project root:
 
@@ -28,7 +29,7 @@ To give the agent the always-on operating context (the guardrails and pipeline, 
 make install-agent-context DEST=.   # copies templates/CLAUDE.md + templates/AGENTS.md (refuses to clobber)
 ```
 
-`templates/CLAUDE.md` (Claude Code) and `templates/AGENTS.md` (Codex) carry the human-led guardrails: run `/rt-govern` first, no autonomous offensive execution, data-class egress limits, fail-closed independent verification, and treating ingested CTI as untrusted data. They are operating context for an engagement project, distinct from any coding-style `CLAUDE.md` you keep for development.
+`templates/CLAUDE.md` (Claude Code) and `templates/AGENTS.md` (Codex) carry the human-led guardrails: run `rt-govern` first, no autonomous offensive execution, data-class egress limits, fail-closed independent verification, and treating ingested CTI as untrusted data. They are operating context for an engagement project, distinct from any coding-style `CLAUDE.md` you keep for development.
 
 ## The eight skills
 
@@ -143,7 +144,7 @@ templates/              INTAKE.md (engagement brief) + CLAUDE.md + AGENTS.md (op
 MAINTENANCE.md          how the catalogs stay current
 ```
 
-Logic lives in portable `references/*.md`; `SKILL.md` (Claude Code) and `AGENTS.md` (Codex) are thin adapters over the same references. See `skills/_shared/references/degradation.md`.
+Logic lives in portable `references/*.md`; the `SKILL.md` that Claude Code and Codex both load is a thin adapter over them (each skill's `AGENTS.md` adds Codex operating context). See `skills/_shared/references/degradation.md`.
 
 ## Deliverables
 
